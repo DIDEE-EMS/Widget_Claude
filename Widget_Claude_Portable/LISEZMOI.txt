@@ -1,0 +1,71 @@
+========================================
+   WIDGET CLAUDE - Consommation en direct
+========================================
+
+Affiche sur le bureau ta consommation Claude :
+  - Session (fenetre de 5 h)  : % utilise + temps avant reset
+  - Semaine (7 jours)         : % utilise + temps avant reset
+Barres colorees : vert < 50 %, ambre 50-85 %, rouge > 85 %.
+
+
+----------------------------------------
+ PREREQUIS (important)
+----------------------------------------
+Le widget lit ta consommation via Claude Code installe sur le PC.
+Sur chaque PC ou tu veux l'utiliser, il faut donc que :
+  1. Claude Code soit installe
+  2. Tu sois connecte a ton compte Claude (commande : claude  puis  /login)
+
+Aucun mot de passe ni jeton n'est stocke sur la cle USB : le widget
+utilise uniquement la session deja presente sur le PC.
+
+
+----------------------------------------
+ UTILISATION RAPIDE (depuis la cle USB)
+----------------------------------------
+Le plus simple - double-clique sur :   ClaudeWidget.exe
+(fichier unique, icone integree)
+
+NOTE : au tout 1er lancement depuis une cle USB, Windows peut afficher
+"Windows a protege votre PC" (SmartScreen, car le .exe n'est pas signe).
+=> clique "Informations complementaires" puis "Executer quand meme".
+(une seule fois par PC)
+
+Pour eviter cet avertissement, tu peux aussi lancer via :
+   "Lancer Widget Claude.vbs"  (fait exactement la meme chose)
+
+  - Deplace le widget : clique-glisse dessus (la position est memorisee)
+  - Ferme le widget   : la croix X en haut a droite
+
+Version icone dans la zone de notification (style DuMeter) :
+Double-clique sur :   "ClaudeTray.vbs"
+(l'icone apparait pres de l'horloge ; survole-la pour le detail,
+ clic gauche pour le panneau, clic droit pour le menu)
+
+
+----------------------------------------
+ LANCEMENT AUTOMATIQUE AU DEMARRAGE
+----------------------------------------
+1. Copie d'abord ce dossier sur le disque du PC
+   (par exemple dans  Documents) - PAS depuis la cle USB,
+   sinon le widget ne se lancera que si la cle est branchee.
+2. Double-clique sur :  "Activer demarrage auto.vbs"
+
+Pour desactiver : supprime le raccourci "Claude Usage Widget"
+dans le dossier Demarrage de Windows
+(touche Windows + R, tape  shell:startup , puis Entree).
+
+
+----------------------------------------
+ CONTENU DU DOSSIER
+----------------------------------------
+ClaudeWidget.exe           -> LE widget en 1 fichier (le plus simple)
+claude.ico                 -> l'icone
+Lancer Widget Claude.vbs   -> lance le widget flottant (sans .exe)
+ClaudeUsageWidget.ps1      -> le widget flottant (code)
+ClaudeTray.vbs             -> lance la version icone (tray)
+ClaudeTrayWidget.ps1       -> la version icone (code)
+Activer demarrage auto.vbs -> ajoute au demarrage de Windows
+Installer-Demarrage.ps1    -> script du demarrage auto
+ClaudeWidget.vbs           -> lanceur (identique a "Lancer Widget Claude.vbs")
+LISEZMOI.txt               -> ce fichier

@@ -1,0 +1,9 @@
+# Config locale de la machine / Claude Code
+.claude/
+*.credentials.json
+.credentials.json
+
+# Divers
+*.log
+Thumbs.db
+desktop.ini
