@@ -29,7 +29,7 @@ Les données se rafraîchissent automatiquement toutes les 2 minutes.
 Sur chaque PC où tu veux utiliser le widget :
 
 1. **Claude Code** installé.
-2. Être **connecté à ton compte Claude** : lance `claude` puis `/login`.
+2. Être **connecté à ton compte Claude**. Si tu as déjà connecté Claude Code dans ton terminal (PowerShell ou Git Bash), c'est bon — pas besoin de refaire `/login`. Sinon, lance `claude` une première fois et fais `/login`.
 
 Le widget lit le fichier de session `~/.claude/.credentials.json` et rafraîchit le jeton OAuth automatiquement quand il expire. Il n'écrit jamais de secret ailleurs.
 
@@ -66,8 +66,8 @@ powershell -ExecutionPolicy Bypass -File Installer-Demarrage.ps1 -Remove
 Pour désactiver manuellement : supprime le raccourci « Claude Usage Widget » dans `shell:startup` (touche Windows + R → `shell:startup`).
 
 > **À savoir au démarrage**
-> - Pour que les valeurs s'affichent, il faut **être connecté à Claude** (Claude Code installé et session active via `claude` → `/login`). Sans connexion, le widget affiche « Non connecté à Claude ».
-> - Les pourcentages peuvent mettre **2 à 3 minutes** à apparaître après que tu aies **commencé à travailler sur un projet avec Claude** : le widget interroge l'API toutes les 2 minutes, et la consommation côté serveur n'est mise à jour qu'une fois l'activité prise en compte.
+> - Pour que les valeurs s'affichent, il faut **être connecté à Claude**. Si Claude Code est déjà connecté dans ton terminal (PowerShell ou Git Bash), rien à faire — `/login` n'est pas nécessaire. Sans connexion, le widget affiche « Non connecté à Claude ».
+> - Une fois que tu lances `claude` sur un dossier, il suffit de **patienter** : les pourcentages peuvent mettre **2 à 3 minutes** à apparaître. Le widget interroge l'API toutes les 2 minutes, et la consommation côté serveur n'est mise à jour qu'une fois l'activité prise en compte.
 
 ---
 
