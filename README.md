@@ -8,6 +8,10 @@ Les données sont lues via la session **Claude Code** déjà présente sur le PC
 
 ## Aperçu
 
+<p align="center">
+  <img src="docs/widget.png" alt="Widget Claude posé sur le bureau, affichant la consommation Session et Semaine" width="340">
+</p>
+
 Deux affichages au choix :
 
 | Mode | Fichier | Description |
