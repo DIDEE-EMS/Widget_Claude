@@ -65,6 +65,10 @@ powershell -ExecutionPolicy Bypass -File Installer-Demarrage.ps1 -Remove
 
 Pour désactiver manuellement : supprime le raccourci « Claude Usage Widget » dans `shell:startup` (touche Windows + R → `shell:startup`).
 
+> **À savoir au démarrage**
+> - Pour que les valeurs s'affichent, il faut **être connecté à Claude** (Claude Code installé et session active via `claude` → `/login`). Sans connexion, le widget affiche « Non connecté à Claude ».
+> - Les pourcentages peuvent mettre **2 à 3 minutes** à apparaître après que tu aies **commencé à travailler sur un projet avec Claude** : le widget interroge l'API toutes les 2 minutes, et la consommation côté serveur n'est mise à jour qu'une fois l'activité prise en compte.
+
 ---
 
 ## Contenu du dépôt
