@@ -1,0 +1,23 @@
+name: Mirror to GitLab EMS
+
+on:
+  push:
+    branches: [ main, master ] # S'active à chaque push sur main ou master
+
+jobs:
+  to_gitlab:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout target repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Important pour récupérer tout l'historique et toutes les branches
+
+      - name: Mirror to GitLab
+        run: |
+          # Remplace l'URL ci-dessous par celle de ton projet GitLab EMS (sans le https://)
+          # Exemple : gitlab.ems.fr/ton-identifiant/ton-projet.git
+          GITLAB_REPO="gitlab.strasbourg.cloud/direction-de-l-enfance-et-de-l-education/widget_claude"
+          
+          # Push vers GitLab en utilisant le token secret
+          git push --prune --force https://oauth2:${{ secrets.GITLAB_TOKEN }}@$GITLAB_REPO refs/remotes/origin/*:refs/heads/*
