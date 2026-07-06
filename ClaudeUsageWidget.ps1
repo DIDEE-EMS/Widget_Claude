@@ -1,4 +1,4 @@
-﻿# ============================================================
+# ============================================================
 #  Claude Usage Widget  -  bureau Windows 11
 #  Affiche la conso Session (5h) + Hebdo (7j) + reset
 #  Lance avec : powershell -ExecutionPolicy Bypass -File ClaudeUsageWidget.ps1
@@ -6,12 +6,31 @@
 # ============================================================
 
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
+Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, System.Windows.Forms, System.Drawing
 
 # ---------- Config ----------
+if ($MyInvocation.MyCommand.Path) { $ScriptDir = Split-Path $MyInvocation.MyCommand.Path -Parent }
+else { $ScriptDir = [System.IO.Path]::GetDirectoryName([System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName) }
+if (-not $ScriptDir) { $ScriptDir = (Get-Location).Path }
+
 $CredPath   = Join-Path $env:USERPROFILE '.claude\.credentials.json'
-$PosPath    = Join-Path $env:USERPROFILE '.claude\widget-pos.json'
+$PosPath    = Join-Path $ScriptDir 'widget_pos.json'
 $ClientId   = '9d1c250a-e61b-44d9-88ed-5944d1962f5e'
+
+Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+public class Hotkey {
+    [DllImport("user32.dll")] public static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+}
+"@
+
+function Write-Log($msg) {
+    try {
+        $file = Join-Path $ScriptDir "ClaudeHistory.log"
+        "[{0:yyyy-MM-dd HH:mm:ss}] $msg" -f (Get-Date) | Out-File -FilePath $file -Append -Encoding UTF8
+    } catch {}
+}
 $TokenUrl   = 'https://console.anthropic.com/v1/oauth/token'
 $UsageUrl   = 'https://api.anthropic.com/api/oauth/usage'
 $PollMs     = 120000   # rafraîchit les données toutes les 2 min
@@ -82,9 +101,9 @@ function Format-Countdown($iso) {
     try { $t = ([datetimeoffset]$iso).LocalDateTime } catch { return '' }
     $span = $t - (Get-Date)
     if ($span.TotalSeconds -le 0) { return 'maintenant' }
-    if ($span.TotalDays   -ge 1) { return ('{0}j {1}h'   -f [int]$span.TotalDays, $span.Hours) }
-    if ($span.TotalHours  -ge 1) { return ('{0}h {1}min' -f [int]$span.TotalHours, $span.Minutes) }
-    return ('{0} min' -f [int]$span.TotalMinutes)
+    if ($span.TotalDays   -ge 1) { return ('{0}j {1}h'   -f [Math]::Floor($span.TotalDays), $span.Hours) }
+    if ($span.TotalHours  -ge 1) { return ('{0}h {1}min' -f [Math]::Floor($span.TotalHours), $span.Minutes) }
+    return ('{0} min' -f [Math]::Round($span.TotalMinutes))
 }
 
 function Get-BarColor([double]$pct) {
@@ -103,7 +122,23 @@ function Get-BarColor([double]$pct) {
         Topmost="True" ShowInTaskbar="False">
   <Grid>
     <Viewbox Stretch="Uniform" StretchDirection="Both">
-    <Border Width="280" Background="#EE1B1B1F" CornerRadius="14" BorderBrush="#33FFFFFF" BorderThickness="1" Padding="14">
+    <Border x:Name="MainBorder" Width="280" Background="#EE1B1B1F" CornerRadius="14" BorderBrush="#33FFFFFF" BorderThickness="1" Padding="14">
+      <Border.ContextMenu>
+        <ContextMenu>
+          <MenuItem x:Name="MiAlwaysOnTop" Header="Toujours au-dessus" IsCheckable="True" IsChecked="True"/>
+          <MenuItem x:Name="MiGhost" Header="Mode Fantôme (Transparent)" IsCheckable="True" IsChecked="False"/>
+          <MenuItem Header="Thème">
+            <MenuItem x:Name="MiThemeNormal" Header="Défaut" IsCheckable="True" IsChecked="True"/>
+            <MenuItem x:Name="MiThemeRainbow" Header="Rainbow" IsCheckable="True" IsChecked="False"/>
+            <MenuItem x:Name="MiThemeN64" Header="Nintendo 64" IsCheckable="True" IsChecked="False"/>
+            <MenuItem x:Name="MiThemeGC" Header="Gamecube" IsCheckable="True" IsChecked="False"/>
+          </MenuItem>
+          <MenuItem x:Name="MiSound" Header="Activer le son des tokens" IsCheckable="True" IsChecked="True"/>
+          <MenuItem x:Name="MiToast" Header="Activer les notifications Windows" IsCheckable="True" IsChecked="True"/>
+          <Separator/>
+          <MenuItem x:Name="MiAbout" Header="À propos..."/>
+        </ContextMenu>
+      </Border.ContextMenu>
     <Border.Effect><DropShadowEffect BlurRadius="18" ShadowDepth="0" Opacity="0.5"/></Border.Effect>
     <StackPanel>
       <Grid>
@@ -111,6 +146,8 @@ function Get-BarColor([double]$pct) {
           <Ellipse Width="9" Height="9" Fill="#D97757" VerticalAlignment="Center"/>
           <TextBlock Text="Claude" Foreground="#FFFFFF" FontFamily="Segoe UI" FontSize="13"
                      FontWeight="SemiBold" Margin="7,0,0,0" VerticalAlignment="Center"/>
+          <TextBlock Text="v1.3" Foreground="#666666" FontFamily="Segoe UI" FontSize="10"
+                     FontWeight="Regular" Margin="6,2,0,0" VerticalAlignment="Center"/>
         </StackPanel>
         <TextBlock x:Name="BtnClose" Text="✕" Foreground="#888" FontFamily="Segoe UI" FontSize="13"
                    Background="Transparent" Padding="8,2,2,2"
@@ -123,7 +160,10 @@ function Get-BarColor([double]$pct) {
         <TextBlock x:Name="SessPct" Text="—" Foreground="#FFFFFF" FontFamily="Segoe UI" FontSize="15"
                    FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
       </Grid>
-      <Border Background="#3C3C48" CornerRadius="6" Height="12" Margin="0,6,0,0" ClipToBounds="True">
+      <Grid Margin="0,0,0,0" Height="24">
+        <Image x:Name="PikaImg" Stretch="Uniform" Width="24" Height="24" HorizontalAlignment="Left" Margin="0,0,0,0"/>
+      </Grid>
+      <Border Background="#3C3C48" CornerRadius="6" Height="12" Margin="0,2,0,0" ClipToBounds="True">
         <Grid>
           <Grid.ColumnDefinitions>
             <ColumnDefinition x:Name="SessFill" Width="0*"/>
@@ -177,6 +217,22 @@ $SessFill = $win.FindName('SessFill'); $SessEmpty = $win.FindName('SessEmpty')
 $WeekFill = $win.FindName('WeekFill'); $WeekEmpty = $win.FindName('WeekEmpty')
 $BtnClose = $win.FindName('BtnClose')
 $Grip     = $win.FindName('Grip')
+$PikaImg  = $win.FindName('PikaImg')
+try {
+    $decoder = New-Object System.Windows.Media.Imaging.GifBitmapDecoder([Uri]::new((Join-Path $ScriptDir 'pikachu-cours-dark.gif')), [System.Windows.Media.Imaging.BitmapCreateOptions]::PreservePixelFormat, [System.Windows.Media.Imaging.BitmapCacheOption]::Default)
+    $script:pikaFrames = $decoder.Frames
+    if ($script:pikaFrames.Count -gt 0) {
+        $PikaImg.Source = $script:pikaFrames[0]
+        $script:pikaFrameIdx = 0
+        $script:pikaTimer = New-Object System.Windows.Threading.DispatcherTimer
+        $script:pikaTimer.Interval = [TimeSpan]::FromMilliseconds(50)
+        $script:pikaTimer.Add_Tick({
+            $script:pikaFrameIdx = ($script:pikaFrameIdx + 1) % $script:pikaFrames.Count
+            $PikaImg.Source = $script:pikaFrames[$script:pikaFrameIdx]
+        })
+        $script:pikaTimer.Start()
+    }
+} catch {}
 
 # ---------- Réglages mémorisés (position + taille) ----------
 $win.WindowStartupLocation = 'Manual'
@@ -255,7 +311,42 @@ function Set-Cols($fillCol, $emptyCol, [double]$pct) {
 function Update-Bar($bar, $fillCol, $emptyCol, $pctBox, [double]$pct) {
     $pctBox.Text = ('{0:0}%' -f $pct)
     Set-Cols $fillCol $emptyCol $pct
-    $bar.Background = (Get-BarColor $pct)
+    $t = 'Normal'
+    if ($win.FindName('MiThemeRainbow').IsChecked) { $t = 'Rainbow' }
+    if ($win.FindName('MiThemeN64').IsChecked) { $t = 'N64' }
+    if ($win.FindName('MiThemeGC').IsChecked) { $t = 'GC' }
+
+    if ($t -eq 'Rainbow') {
+        $br = [System.Windows.Media.LinearGradientBrush]::new()
+        $br.StartPoint = [System.Windows.Point]::new(0,0); $br.EndPoint = [System.Windows.Point]::new(1,0)
+        $br.GradientStops.Add([System.Windows.Media.GradientStop]::new([System.Windows.Media.ColorConverter]::ConvertFromString('#4ADE80'), 0.0))
+        $br.GradientStops.Add([System.Windows.Media.GradientStop]::new([System.Windows.Media.ColorConverter]::ConvertFromString('#FBBF24'), 0.5))
+        $br.GradientStops.Add([System.Windows.Media.GradientStop]::new([System.Windows.Media.ColorConverter]::ConvertFromString('#F87171'), 1.0))
+        $bar.Background = $br
+    } elseif ($t -eq 'N64') {
+        $br = [System.Windows.Media.LinearGradientBrush]::new()
+        $br.StartPoint = [System.Windows.Point]::new(0,0); $br.EndPoint = [System.Windows.Point]::new(1,0)
+        $br.GradientStops.Add([System.Windows.Media.GradientStop]::new([System.Windows.Media.ColorConverter]::ConvertFromString('#0072CE'), 0.0))
+        $br.GradientStops.Add([System.Windows.Media.GradientStop]::new([System.Windows.Media.ColorConverter]::ConvertFromString('#00A651'), 0.33))
+        $br.GradientStops.Add([System.Windows.Media.GradientStop]::new([System.Windows.Media.ColorConverter]::ConvertFromString('#FFCC00'), 0.66))
+        $br.GradientStops.Add([System.Windows.Media.GradientStop]::new([System.Windows.Media.ColorConverter]::ConvertFromString('#E41A28'), 1.0))
+        $bar.Background = $br
+    } elseif ($t -eq 'GC') {
+        $br = [System.Windows.Media.LinearGradientBrush]::new()
+        $br.StartPoint = [System.Windows.Point]::new(0,0); $br.EndPoint = [System.Windows.Point]::new(1,0)
+        $br.GradientStops.Add([System.Windows.Media.GradientStop]::new([System.Windows.Media.ColorConverter]::ConvertFromString('#4B0082'), 0.0))
+        $br.GradientStops.Add([System.Windows.Media.GradientStop]::new([System.Windows.Media.ColorConverter]::ConvertFromString('#808080'), 0.5))
+        $br.GradientStops.Add([System.Windows.Media.GradientStop]::new([System.Windows.Media.ColorConverter]::ConvertFromString('#FFA500'), 1.0))
+        $bar.Background = $br
+    } else {
+        $c = Get-BarColor $pct
+        $bar.Background = [System.Windows.Media.SolidColorBrush]::new(( [System.Windows.Media.ColorConverter]::ConvertFromString($c) ))
+    }
+    if ($PikaImg -and $pctBox.Name -eq 'SessPct') {
+        $usable = 252 - 24
+        $left = ($pct / 100) * $usable
+        $PikaImg.Margin = New-Object System.Windows.Thickness $left, 0, 0, 0
+    }
 }
 
 function Refresh-Data {
@@ -269,9 +360,40 @@ function Refresh-Data {
         }
         return
     }
+    $play = $false
+    if ($script:hasData -and $script:lastSessRst -and $d.sessionRst -and ($script:lastSessRst -ne $d.sessionRst)) {
+        try {
+            $oldTime = ([datetimeoffset]$script:lastSessRst).LocalDateTime
+            if ((Get-Date) -ge $oldTime.AddMinutes(-5)) { $play = $true }
+        } catch {}
+    }
+    if ($script:hasData -and ($null -ne $script:lastSessPct) -and (($script:lastSessPct - $d.sessionPct) -ge 1)) {
+        $play = $true
+    }
+    if ($script:hasData) {
+        if ($d.sessionPct -ge 95 -and $script:lastSessPct -lt 95) { Write-Log "Limite Claude presque atteinte ($($d.sessionPct)%)." }
+        if ($d.sessionPct -eq 100 -and $script:lastSessPct -lt 100) { Write-Log "Limite Claude atteinte (100%)." }
+    }
+    if ($play) {
+        Write-Log "Crédits restaurés. Utilisation redescendue de $($script:lastSessPct)% à $($d.sessionPct)%."
+        if ($win.FindName('MiSound').IsChecked) {
+            try { (New-Object System.Media.SoundPlayer "C:\Windows\Media\tada.wav").Play() } catch {}
+        }
+        if ($win.FindName('MiToast').IsChecked) {
+            try {
+                if (-not $script:toastIcon) {
+                    $script:toastIcon = New-Object System.Windows.Forms.NotifyIcon
+                    $script:toastIcon.Icon = [System.Drawing.SystemIcons]::Information
+                    $script:toastIcon.Visible = $true
+                }
+                $script:toastIcon.ShowBalloonTip(5000, "Claude Widget", "Vos crédits Claude sont de retour !", [System.Windows.Forms.ToolTipIcon]::Info)
+            } catch {}
+        }
+    }
     $script:hasData = $true
     Update-Bar $SessBar $SessFill $SessEmpty $SessPct $d.sessionPct
     Update-Bar $WeekBar $WeekFill $WeekEmpty $WeekPct $d.weekPct
+    $script:lastSessPct = $d.sessionPct
     $script:lastSessRst = $d.sessionRst
     $script:lastWeekRst = $d.weekRst
     Update-Countdowns
@@ -289,9 +411,30 @@ $dataTimer.Add_Tick({ Refresh-Data })
 
 $tickTimer = New-Object System.Windows.Threading.DispatcherTimer
 $tickTimer.Interval = [TimeSpan]::FromSeconds(30)
-$tickTimer.Add_Tick({ Update-Countdowns })
+$tickTimer.Add_Tick({ 
+    Update-Countdowns
+    if ($win.FindName('MiAlwaysOnTop').IsChecked) { $win.Topmost = $true }
+})
 
 $win.Add_SourceInitialized({
+    try {
+        $hwnd = (New-Object System.Windows.Interop.WindowInteropHelper($win)).Handle
+        $src = [System.Windows.Interop.HwndSource]::FromHwnd($hwnd)
+        $src.AddHook({
+            param($hwnd, $msg, $wParam, $lParam, [ref]$handled)
+            if ($msg -eq 0x0312 -and $wParam -eq 1) {
+                if ($win.Visibility -eq 'Visible') { $win.Visibility = 'Hidden' }
+                else { 
+                    $win.Visibility = 'Visible'
+                    if ($win.FindName('MiAlwaysOnTop').IsChecked) { $win.Topmost = $true }
+                    $win.Activate()
+                }
+                $handled = $true
+            }
+            return [IntPtr]::Zero
+        })
+        [Hotkey]::RegisterHotKey($hwnd, 1, 6, 0x43)
+    } catch {}
     Refresh-Data
     $dataTimer.Start()
     $tickTimer.Start()
@@ -313,6 +456,53 @@ $win.Add_ContentRendered({
         $win.Left = $wa.Right  - $win.Width  - 12
         $win.Top  = $wa.Bottom - $win.Height - 12
     }
+})
+
+$win.FindName('MiAlwaysOnTop').Add_Click({ $win.Topmost = $win.FindName('MiAlwaysOnTop').IsChecked })
+$win.FindName('MiGhost').Add_Click({ if ($win.FindName('MiGhost').IsChecked) { $win.Opacity = 0.5 } else { $win.Opacity = 1.0 } })
+
+function Set-Theme($t) {
+    $win.FindName('MiThemeNormal').IsChecked = ($t -eq 'Normal')
+    $win.FindName('MiThemeRainbow').IsChecked = ($t -eq 'Rainbow')
+    $win.FindName('MiThemeN64').IsChecked = ($t -eq 'N64')
+    $win.FindName('MiThemeGC').IsChecked = ($t -eq 'GC')
+    
+    $mb = $win.FindName('MainBorder')
+    if ($t -eq 'GC') {
+        $mb.Background = [System.Windows.Media.SolidColorBrush]::new(( [System.Windows.Media.ColorConverter]::ConvertFromString('#EE1A1A24') ))
+    } elseif ($t -eq 'N64') {
+        $mb.Background = [System.Windows.Media.SolidColorBrush]::new(( [System.Windows.Media.ColorConverter]::ConvertFromString('#EE2A2A2A') ))
+    } else {
+        $mb.Background = [System.Windows.Media.SolidColorBrush]::new(( [System.Windows.Media.ColorConverter]::ConvertFromString('#EE1B1B1F') ))
+    }
+    Refresh-Data
+}
+
+$win.FindName('MiThemeNormal').Add_Click({ Set-Theme 'Normal' })
+$win.FindName('MiThemeRainbow').Add_Click({ Set-Theme 'Rainbow' })
+$win.FindName('MiThemeN64').Add_Click({ Set-Theme 'N64' })
+$win.FindName('MiThemeGC').Add_Click({ Set-Theme 'GC' })
+
+$win.FindName('MiAbout').Add_Click({
+    $ab = New-Object System.Windows.Forms.Form
+    $ab.Text = 'À propos'
+    $ab.Size = New-Object System.Drawing.Size 320, 360
+    $ab.StartPosition = 'CenterScreen'
+    $ab.FormBorderStyle = 'FixedDialog'
+    $ab.MaximizeBox = $false
+    $al = New-Object System.Windows.Forms.Label
+    $al.Text = 'Made In DIDEE EMS 2026'
+    $al.Font = [System.Drawing.Font]::new('Segoe UI', 14, [System.Drawing.FontStyle]::Bold)
+    $al.Location = New-Object System.Drawing.Point 10, 10
+    $al.AutoSize = $true
+    $ab.Controls.Add($al)
+    $pb = New-Object System.Windows.Forms.PictureBox
+    $pb.Location = New-Object System.Drawing.Point 10, 45
+    $pb.Size = New-Object System.Drawing.Size 280, 260
+    $pb.SizeMode = 'Zoom'
+    $pb.ImageLocation = 'https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif'
+    $ab.Controls.Add($pb)
+    $ab.ShowDialog()
 })
 
 [void]$win.ShowDialog()
