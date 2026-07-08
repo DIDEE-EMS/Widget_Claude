@@ -578,9 +578,19 @@ function Refresh-Data {
     Update-Bar $SessBar $SessFill $SessEmpty $SessPct $d.sessionPct
     Update-Bar $WeekBar $WeekFill $WeekEmpty $WeekPct $d.weekPct
     $script:lastSessPct = $d.sessionPct
+    $script:lastWeekPct = $d.weekPct
     $script:lastSessRst = $d.sessionRst
     $script:lastWeekRst = $d.weekRst
     Update-Countdowns
+}
+
+# Repeint les barres + mascotte à partir des dernières valeurs connues,
+# sans dépendre d'un appel réseau (utilisé au changement de thème).
+function Repaint-Bars {
+    $sp = if ($null -ne $script:lastSessPct) { [double]$script:lastSessPct } else { 0.0 }
+    $wp = if ($null -ne $script:lastWeekPct) { [double]$script:lastWeekPct } else { 0.0 }
+    Update-Bar $SessBar $SessFill $SessEmpty $SessPct $sp
+    Update-Bar $WeekBar $WeekFill $WeekEmpty $WeekPct $wp
 }
 
 function Update-Countdowns {
@@ -673,7 +683,8 @@ function Set-Theme($t) {
     # Musique Nyan Cat : uniquement sur le thème Rainbow
     if ($t -eq 'Rainbow') { Start-ThemeMusic } else { Stop-ThemeMusic }
 
-    Refresh-Data
+    # Repeint immédiatement (indépendant du réseau) puis tente un rafraîchissement
+    Repaint-Bars
 }
 
 $win.FindName('MiThemeNormal').Add_Click({ Set-Theme 'Normal' })
