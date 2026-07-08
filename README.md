@@ -81,7 +81,7 @@ Pour désactiver : `powershell -ExecutionPolicy Bypass -File Installer-Demarrage
 | `ClaudeUsageWidget.ps1` | Code du widget flottant (WPF / PowerShell). |
 | `ClaudeWidget.vbs` | Lanceur silencieux du script. |
 | `Installer-Demarrage.ps1` | Active / désactive le lancement au démarrage. |
-| `pikachu-cours-dark.gif` / `nyan-cat.gif` | Sprites animés (sources ; déjà intégrés dans `ClaudeWidget.exe`). |
+| `pikachu-cours-trans.gif` / `nyan-cat.gif` | Sprites animés à fond transparent (sources ; déjà intégrés dans `ClaudeWidget.exe`). |
 | `Build-Icon.ps1` | Génère `claude.ico`. |
 | `claude.ico` | Icône du widget. |
 | `tools/` | Source de la musique Nyan Cat (`.mid`) et script de rendu chiptune (`render-nyan.py`). |
