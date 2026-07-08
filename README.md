@@ -1,4 +1,4 @@
-# Widget Claude v1.3
+# Widget Claude v1.42(b)
 
 Widget de bureau pour Windows 11 qui affiche **en direct ta consommation Claude** : la fenêtre de session (5 h) et le quota hebdomadaire (7 jours), avec le temps restant avant chaque reset.
 
@@ -16,7 +16,7 @@ Affichage :
 
 | Mode | Fichier | Description |
 |------|---------|-------------|
-| **Flottant** | `ClaudeWidget.exe` | Petit panneau posé sur le bureau, déplaçable au clic-glissé (position mémorisée). |
+| **Flottant** | `ClaudeWidget.exe` | Petit panneau posé sur le bureau, déplaçable au clic-glissé (position, taille et thème mémorisés). |
 
 Barres de couleur : 🟢 vert < 50 %, 🟠 ambre 50–85 %, 🔴 rouge > 85 %.
 Les données se rafraîchissent automatiquement toutes les 2 minutes.
@@ -27,16 +27,17 @@ Les données se rafraîchissent automatiquement toutes les 2 minutes.
 
 - **Raccourci Global** : Appuyez sur `Ctrl + Maj + C` de n'importe où pour cacher ou afficher le widget flottant instantanément !
 - **Notifications & Son** : Recevez une bulle de notification Windows et un son (`tada.wav`) quand vos tokens de session sont restaurés.
-- **Thèmes & Personnalisation** : Clic-droit pour changer de thème ! 
-  - *Normal* (gris classique)
+- **Thèmes & Personnalisation** : Clic-droit pour changer de thème !
+  - *Normal* (gris classique) — un son « pika pika » joué **au lancement**
   - *Rainbow* (dégradé arc-en-ciel + **Nyan Cat animé** et sa **musique en boucle**)
   - *Nintendo 64* (fond gris clair, barre 4 couleurs N64)
   - *Gamecube* (fond Indigo, barre orange)
-  - *DJ* (Rose Playboy, visage ( ๏ )( ๏ ) qui se dandine avec un « Boing Boing »)
+  - *DJ* (Rose Playboy, visage ( ๏ )( ๏ ) qui se dandine avec un « Boing Boing » + un son joué **à la sélection**)
   - *888* (palette maussade, visage 8=D dont la langue s'allonge avec la conso)
-- **Musique des thèmes** : la musique Nyan Cat tourne en boucle sur le thème Rainbow, et un son se joue une fois à la sélection du thème DJ ; le tout désactivable via le clic-droit (« Activer la musique des thèmes »).
+- **Mémorisation du thème** : le widget rouvre automatiquement sur le **dernier thème utilisé** avant fermeture.
+- **Sons & musique des thèmes** : Nyan Cat en boucle (Rainbow), un son à la sélection (DJ), un son au démarrage (Défaut) — le tout désactivable via le clic-droit (« Activer la musique des thèmes »).
 - **Mode Fantôme** : Rend le widget flottant semi-transparent (50%) pour ne pas gêner votre code.
-- **Mascottes animées** : un Pikachu (thèmes classiques) ou un Nyan Cat (Rainbow) court le long de votre barre de session.
+- **Mascottes animées à fond transparent** : un Pikachu (thèmes classiques) ou un Nyan Cat (Rainbow) court le long de votre barre de session.
 - **Historique** : Génère un journal d'utilisation `ClaudeHistory.log` pour suivre l'heure exacte de vos limites et renouvellements.
 
 ---
@@ -77,7 +78,7 @@ Pour désactiver : `powershell -ExecutionPolicy Bypass -File Installer-Demarrage
 
 | Fichier | Rôle |
 |---------|------|
-| `ClaudeWidget.exe` | Le widget flottant, fichier unique 100 % autonome (Pikachu, Nyan Cat et musique intégrés). |
+| `ClaudeWidget.exe` | Le widget flottant, fichier unique 100 % autonome (Pikachu transparent, Nyan Cat, musiques et sons intégrés). |
 | `ClaudeUsageWidget.ps1` | Code du widget flottant (WPF / PowerShell). |
 | `ClaudeWidget.vbs` | Lanceur silencieux du script. |
 | `Installer-Demarrage.ps1` | Active / désactive le lancement au démarrage. |
@@ -94,6 +95,8 @@ Pour désactiver : `powershell -ExecutionPolicy Bypass -File Installer-Demarrage
 - `Get-Creds` lit `~/.claude/.credentials.json` ; `Get-Token` / `Refresh-Token` gèrent le jeton OAuth (`client_id` public de Claude Code, `grant_type=refresh_token`).
 - La consommation est récupérée sur `https://api.anthropic.com/api/oauth/usage` (en-tête `anthropic-beta: oauth-2025-04-20`), champs `five_hour.utilization` et `seven_day.utilization`.
 - L'interface est en **WPF** (PowerShell).
+- La position, la taille et le dernier thème sont mémorisés dans `widget_pos.json`.
+- Les sprites (GIF) et sons (WAV) sont embarqués en base64 dans le script/`.exe` : aucun fichier annexe requis. Les GIF animés sont décodés via GDI+ pour préserver la transparence.
 
 ---
 
