@@ -393,10 +393,11 @@ try {
 
 # ---------- Réglages mémorisés (position + taille) ----------
 $win.WindowStartupLocation = 'Manual'
-$script:savedLeft = $null; $script:savedTop = $null; $script:savedW = $null
+$script:savedLeft = $null; $script:savedTop = $null; $script:savedW = $null; $script:savedTheme = $null
+$script:currentTheme = 'Normal'
 if (Test-Path $PosPath) {
     try { $p = Get-Content $PosPath -Raw | ConvertFrom-Json
-          $script:savedLeft = $p.left; $script:savedTop = $p.top; $script:savedW = $p.w } catch {}
+          $script:savedLeft = $p.left; $script:savedTop = $p.top; $script:savedW = $p.w; $script:savedTheme = $p.theme } catch {}
 }
 $script:aspect = 280.0 / 202.0    # ratio provisoire, recalculé après le rendu
 $MinW = 180.0; $MaxW = 680.0
@@ -404,7 +405,8 @@ $script:inited = $false
 
 # ---------- Fonctions d'état / taille ----------
 function Save-State {
-    try { @{ left=$win.Left; top=$win.Top; w=$win.Width } | ConvertTo-Json | Set-Content $PosPath } catch {}
+    if (-not $script:inited) { return }
+    try { @{ left=$win.Left; top=$win.Top; w=$win.Width; theme=$script:currentTheme } | ConvertTo-Json | Set-Content $PosPath } catch {}
 }
 function Resize-To([double]$w) {
     if ($w -lt $MinW) { $w = $MinW }
@@ -668,8 +670,12 @@ $win.Add_SourceInitialized({
     Refresh-Data
     $dataTimer.Start()
     $tickTimer.Start()
-    # Au lancement, si le thème sélectionné est Défaut : joue le son une fois
-    if ($win.FindName('MiThemeNormal').IsChecked) { Play-DefaultSound }
+    # Restaure le dernier thème utilisé avant fermeture (Défaut si aucun / inconnu)
+    $valid = @('Normal','Rainbow','N64','GC','DJ','888')
+    $startTheme = if ($script:savedTheme -and ($valid -contains [string]$script:savedTheme)) { [string]$script:savedTheme } else { 'Normal' }
+    Set-Theme $startTheme
+    # Son du thème Défaut : au lancement uniquement
+    if ($startTheme -eq 'Normal') { Play-DefaultSound }
 })
 
 # Après le 1er rendu : la fenêtre a pris sa taille naturelle -> on fige le ratio,
@@ -694,6 +700,7 @@ $win.FindName('MiAlwaysOnTop').Add_Click({ $win.Topmost = $win.FindName('MiAlway
 $win.FindName('MiGhost').Add_Click({ if ($win.FindName('MiGhost').IsChecked) { $win.Opacity = 0.5 } else { $win.Opacity = 1.0 } })
 
 function Set-Theme($t) {
+    $script:currentTheme = $t
     $win.FindName('MiThemeNormal').IsChecked = ($t -eq 'Normal')
     $win.FindName('MiThemeRainbow').IsChecked = ($t -eq 'Rainbow')
     $win.FindName('MiThemeN64').IsChecked = ($t -eq 'N64')
@@ -725,6 +732,7 @@ function Set-Theme($t) {
 
     # Repeint immédiatement (indépendant du réseau) puis tente un rafraîchissement
     Repaint-Bars
+    Save-State
 }
 
 $win.FindName('MiThemeNormal').Add_Click({ Set-Theme 'Normal' })
