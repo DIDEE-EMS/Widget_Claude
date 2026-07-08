@@ -1,4 +1,4 @@
-# Widget Claude v1.42(b)
+# Widget Claude v1.42(s)
 
 Widget de bureau pour Windows 11 qui affiche **en direct ta consommation Claude** : la fenêtre de session (5 h) et le quota hebdomadaire (7 jours), avec le temps restant avant chaque reset.
 
@@ -23,7 +23,7 @@ Les données se rafraîchissent automatiquement toutes les 2 minutes.
 
 ---
 
-## 🚀 Nouveautés v1.42(b)
+## 🚀 Nouveautés v1.42(s)
 
 - **Raccourci Global** : Appuyez sur `Ctrl + Maj + C` de n'importe où pour cacher ou afficher le widget flottant instantanément !
 - **Notifications & Son** : Recevez une bulle de notification Windows et un son (`tada.wav`) quand vos tokens de session sont restaurés.
@@ -39,6 +39,7 @@ Les données se rafraîchissent automatiquement toutes les 2 minutes.
 - **Mode Fantôme** : Rend le widget flottant semi-transparent (50%) pour ne pas gêner votre code.
 - **Mascottes animées à fond transparent** : un Pikachu (thèmes classiques) ou un Nyan Cat (Rainbow) court le long de votre barre de session.
 - **Historique** : Génère un journal d'utilisation `ClaudeHistory.log` pour suivre l'heure exacte de vos limites et renouvellements.
+- **Robustesse (v1.42(s))** : écriture **atomique et sans BOM** du fichier d'identifiants de Claude Code (jamais corrompu, même si le widget est fermé en plein rafraîchissement), réponses API validées avant usage, et un rafraîchissement raté n'écrase plus les identifiants.
 
 ---
 

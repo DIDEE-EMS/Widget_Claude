@@ -42,19 +42,35 @@ function Get-Creds {
 }
 
 function Save-Creds($obj) {
-    try { $obj | ConvertTo-Json -Depth 10 | Set-Content -Path $CredPath -Encoding UTF8 } catch {}
+    # Écriture atomique, sans BOM : ne jamais corrompre le .credentials.json de Claude Code
+    # (Set-Content -Encoding UTF8 sous PowerShell 5.1 ajoute un BOM qui casse le parseur de Claude Code).
+    try {
+        $json = $obj | ConvertTo-Json -Depth 32
+        $enc  = New-Object System.Text.UTF8Encoding($false)
+        $tmp  = "$CredPath.tmp"
+        [System.IO.File]::WriteAllText($tmp, $json, $enc)
+        # Replace() = remplacement atomique (Win32 ReplaceFile) ; [NullString]::Value passe un vrai null
+        if (Test-Path $CredPath) { [System.IO.File]::Replace($tmp, $CredPath, [NullString]::Value) }
+        else { [System.IO.File]::Move($tmp, $CredPath) }
+    } catch {
+        try { if (Test-Path "$CredPath.tmp") { Remove-Item "$CredPath.tmp" -Force } } catch {}
+    }
 }
 
 function Refresh-Token {
     $c = Get-Creds; if (-not $c) { return $null }
-    $o = $c.claudeAiOauth
+    $o = $c.claudeAiOauth; if (-not $o) { return $null }
     $body = @{ grant_type='refresh_token'; refresh_token=$o.refreshToken; client_id=$ClientId } | ConvertTo-Json
     try {
         $r = Invoke-RestMethod -Uri $TokenUrl -Method Post -ContentType 'application/json' -Body $body -TimeoutSec 20
     } catch { return $null }
-    $o.accessToken  = $r.access_token
+    # Réponse invalide -> on ne touche surtout pas au fichier d'identifiants
+    if (-not $r -or -not $r.access_token) { return $null }
+    $o.accessToken = $r.access_token
     if ($r.refresh_token) { $o.refreshToken = $r.refresh_token }
-    $o.expiresAt    = [int64]((Get-Date).ToUniversalTime() - (Get-Date '1970-01-01')).TotalMilliseconds + ($r.expires_in * 1000)
+    if ($r.expires_in) {
+        $o.expiresAt = [int64]((Get-Date).ToUniversalTime() - (Get-Date '1970-01-01')).TotalMilliseconds + ([double]$r.expires_in * 1000)
+    }
     $c.claudeAiOauth = $o
     Save-Creds $c
     return $o.accessToken
@@ -73,6 +89,16 @@ function Invoke-Usage($token) {
     return Invoke-RestMethod -Uri $UsageUrl -Method Get -Headers $headers -TimeoutSec 20
 }
 
+# Parse défensif d'un pourcentage : tolère null / non-numérique et borne à [0,100]
+function ConvertTo-Pct($v) {
+    if ($null -eq $v) { return 0.0 }
+    $d = 0.0
+    try { $d = [double]$v } catch { return 0.0 }
+    if ([double]::IsNaN($d) -or [double]::IsInfinity($d) -or $d -lt 0) { return 0.0 }
+    if ($d -gt 100) { return 100.0 }
+    return $d
+}
+
 function Get-Usage {
     $token = Get-Token
     if (-not $token) { return @{ ok=$false; err='Non connecté à Claude' } }
@@ -86,11 +112,15 @@ function Get-Usage {
             try { $u = Invoke-Usage $token } catch { return @{ ok=$false; err='Erreur API' } }
         } else { return @{ ok=$false; err='Hors ligne' } }
     }
+    # Réponse vide/malformée : on garde les dernières valeurs plutôt que d'afficher 0 %
+    if ($null -eq $u -or ($null -eq $u.five_hour -and $null -eq $u.seven_day)) {
+        return @{ ok=$false; err='Données invalides' }
+    }
     return @{
         ok          = $true
-        sessionPct  = [double]$u.five_hour.utilization
+        sessionPct  = (ConvertTo-Pct $u.five_hour.utilization)
         sessionRst  = $u.five_hour.resets_at
-        weekPct     = [double]$u.seven_day.utilization
+        weekPct     = (ConvertTo-Pct $u.seven_day.utilization)
         weekRst     = $u.seven_day.resets_at
     }
 }
@@ -149,7 +179,7 @@ function Get-BarColor([double]$pct) {
           <Ellipse Width="9" Height="9" Fill="#D97757" VerticalAlignment="Center"/>
           <TextBlock Text="Claude" Foreground="#FFFFFF" FontFamily="Segoe UI" FontSize="13"
                      FontWeight="SemiBold" Margin="7,0,0,0" VerticalAlignment="Center"/>
-          <TextBlock Text="v1.42(b)" Foreground="#666666" FontFamily="Segoe UI" FontSize="10"
+          <TextBlock Text="v1.42(s)" Foreground="#666666" FontFamily="Segoe UI" FontSize="10"
                      FontWeight="Regular" Margin="6,2,0,0" VerticalAlignment="Center"/>
         </StackPanel>
         <TextBlock x:Name="BtnClose" Text="✕" Foreground="#888" FontFamily="Segoe UI" FontSize="13"
@@ -639,7 +669,7 @@ function Update-Countdowns {
 # ---------- Timers ----------
 $dataTimer = New-Object System.Windows.Threading.DispatcherTimer
 $dataTimer.Interval = [TimeSpan]::FromMilliseconds($PollMs)
-$dataTimer.Add_Tick({ Refresh-Data })
+$dataTimer.Add_Tick({ try { Refresh-Data } catch {} })
 
 $tickTimer = New-Object System.Windows.Threading.DispatcherTimer
 $tickTimer.Interval = [TimeSpan]::FromSeconds(30)
