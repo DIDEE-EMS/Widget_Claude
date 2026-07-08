@@ -1,0 +1,45 @@
+RAPPORT DE FAUX POSITIF — À ENVOYER À KASPERSKY
+================================================
+
+Fichier      : ClaudeWidget.exe
+Détection    : HEUR:TROJAN.MSIL.Alien.gen
+SHA-256      : DB21D0FFE84568A7132938B21235CED31EA9E5A98F1D323852E053EF097EFFD9
+               (exe auto-signe ; si tu re-signes/rebuilds, recalcule le hash)
+Éditeur      : Projet open source « Widget Claude »
+Code source  : https://github.com/DIDEE-EMS/Widget_Claude
+
+OÙ ENVOYER
+----------
+1. Kaspersky VirusDesk (rapide, sans compte) : https://virusdesk.kaspersky.com
+   → Glisser le fichier, puis si « fichier propre » n'apparaît pas, cliquer
+     « Je ne suis pas d'accord avec les résultats » et coller le texte ci-dessous.
+2. Kaspersky OpenTIP (plus complet, compte gratuit) : https://opentip.kaspersky.com
+   → Onglet « Analyse » → uploader l'exe → « Signaler un faux positif ».
+
+MESSAGE À COLLER
+----------------
+Ce fichier est un faux positif. Il s'agit d'un widget de bureau open source
+(code public : https://github.com/DIDEE-EMS/Widget_Claude) qui affiche la
+consommation de l'API Claude de l'utilisateur.
+
+L'exécutable est généré par PS2EXE, qui empaquète un script PowerShell dans un
+exécutable .NET — cause classique de détections heuristiques génériques .NET.
+
+Les comportements détectés par l'heuristique sont tous légitimes et documentés
+dans le code source public :
+- Lecture de son propre fichier de configuration (~/.claude/.credentials.json)
+  pour réutiliser le jeton OAuth existant de Claude Code (aucun vol de secret ;
+  rien n'est envoyé ailleurs).
+- RegisterHotKey (P/Invoke user32) : raccourci global Ctrl+Maj+C pour
+  afficher/masquer le widget.
+- Add-Type : compilation à l'exécution de l'interface WPF.
+- Blobs base64 embarqués : sprites GIF et sons WAV de l'interface.
+- Fenêtre console masquée : c'est une application graphique WPF, pas une console.
+- Exécutable non signé, sans réputation établie.
+
+Le seul accès réseau est vers https://api.anthropic.com/api/oauth/usage
+(endpoint officiel de consommation Anthropic). Aucune persistance malveillante,
+aucune propagation, aucune injection de code, aucune collecte de données.
+
+Merci de bien vouloir mettre à jour la base de signatures pour retirer cette
+détection.
