@@ -114,11 +114,16 @@ function New-TrayIcon([double]$sess, [double]$week, [bool]$ok) {
         if ($miThemeN64.Checked) { $t = 'N64' }
         if ($miThemeGC.Checked) { $t = 'GC' }
         if ($miThemeDJ.Checked) { $t = 'DJ' }
+        if ($miTheme888.Checked) { $t = '888' }
 
         if ($t -eq 'DJ') {
             $pink = New-Object System.Drawing.SolidBrush ([System.Drawing.ColorTranslator]::FromHtml('#FF2D95'))
             $g.FillRectangle($pink, $x, 7, [int]([Math]::Max(0.04,[Math]::Min(1,$sess/100))*$w), $h)
             $g.FillRectangle($pink, $x, 18, [int]([Math]::Max(0.04,[Math]::Min(1,$week/100))*$w), $h); $pink.Dispose()
+        } elseif ($t -eq '888') {
+            $grey = New-Object System.Drawing.SolidBrush ([System.Drawing.ColorTranslator]::FromHtml('#4A5060'))
+            $g.FillRectangle($grey, $x, 7, [int]([Math]::Max(0.04,[Math]::Min(1,$sess/100))*$w), $h)
+            $g.FillRectangle($grey, $x, 18, [int]([Math]::Max(0.04,[Math]::Min(1,$week/100))*$w), $h); $grey.Dispose()
         } elseif ($t -eq 'Rainbow') {
             $rect1 = New-Object System.Drawing.Rectangle $x, 7, $w, $h
             $b1 = New-Object System.Drawing.Drawing2D.LinearGradientBrush $rect1, [System.Drawing.Color]::LimeGreen, [System.Drawing.Color]::Crimson, 0.0
@@ -183,18 +188,21 @@ $miThemeRainbow = New-Object System.Windows.Forms.ToolStripMenuItem 'Rainbow'
 $miThemeN64 = New-Object System.Windows.Forms.ToolStripMenuItem 'Nintendo 64'
 $miThemeGC = New-Object System.Windows.Forms.ToolStripMenuItem 'Gamecube'
 $miThemeDJ = New-Object System.Windows.Forms.ToolStripMenuItem 'DJ'
+$miTheme888 = New-Object System.Windows.Forms.ToolStripMenuItem '888'
 
 $miThemeNormal.Add_Click({ Set-TrayTheme 'Normal' })
 $miThemeRainbow.Add_Click({ Set-TrayTheme 'Rainbow' })
 $miThemeN64.Add_Click({ Set-TrayTheme 'N64' })
 $miThemeGC.Add_Click({ Set-TrayTheme 'GC' })
 $miThemeDJ.Add_Click({ Set-TrayTheme 'DJ' })
+$miTheme888.Add_Click({ Set-TrayTheme '888' })
 
 [void]$miTheme.DropDownItems.Add($miThemeNormal)
 [void]$miTheme.DropDownItems.Add($miThemeRainbow)
 [void]$miTheme.DropDownItems.Add($miThemeN64)
 [void]$miTheme.DropDownItems.Add($miThemeGC)
 [void]$miTheme.DropDownItems.Add($miThemeDJ)
+[void]$miTheme.DropDownItems.Add($miTheme888)
 
 [void]$menu.Items.Add($miTheme)
 
@@ -249,23 +257,36 @@ function Set-TrayTheme($t) {
     $miThemeN64.Checked = ($t -eq 'N64')
     $miThemeGC.Checked = ($t -eq 'GC')
     $miThemeDJ.Checked = ($t -eq 'DJ')
+    $miTheme888.Checked = ($t -eq '888')
     if ($t -eq 'GC') {
         $pop.BackColor = [System.Drawing.ColorTranslator]::FromHtml('#1A1A24')
     } elseif ($t -eq 'N64') {
         $pop.BackColor = [System.Drawing.ColorTranslator]::FromHtml('#2A2A2A')
     } elseif ($t -eq 'DJ') {
         $pop.BackColor = [System.Drawing.ColorTranslator]::FromHtml('#2A0E1E')
+    } elseif ($t -eq '888') {
+        $pop.BackColor = [System.Drawing.ColorTranslator]::FromHtml('#16181D')
     } else {
         $pop.BackColor = [System.Drawing.ColorTranslator]::FromHtml('#1B1B1F')
     }
-    # Dandinement du DJ actif uniquement sur ce thème
+    # Visage selon le thème : Pikachu par défaut, DJ (avec dandinement) ou 888
     if ($t -eq 'DJ') {
         if ($lblDj) { $lblDj.Visible = $true }
+        if ($lblBoing) { $lblBoing.Visible = $true }
+        if ($lblEight) { $lblEight.Visible = $false }
         if ($pbPika) { $pbPika.Visible = $false }
         if ($djTimer) { $djTimer.Start() }
+    } elseif ($t -eq '888') {
+        if ($djTimer) { $djTimer.Stop() }
+        if ($lblDj) { $lblDj.Visible = $false }
+        if ($lblBoing) { $lblBoing.Visible = $false }
+        if ($lblEight) { $lblEight.Visible = $true }
+        if ($pbPika) { $pbPika.Visible = $false }
     } else {
         if ($djTimer) { $djTimer.Stop() }
         if ($lblDj) { $lblDj.Visible = $false }
+        if ($lblBoing) { $lblBoing.Visible = $false }
+        if ($lblEight) { $lblEight.Visible = $false }
         if ($pbPika) { $pbPika.Visible = $true }
     }
     Refresh-All
@@ -293,14 +314,41 @@ $lblDj.Visible = $false
 $pop.Controls.Add($lblDj)
 $lblDj.BringToFront()
 
+# "Boing Boing" qui rebondit au-dessus des parenthèses
+$lblBoing = New-Object System.Windows.Forms.Label
+$lblBoing.Text = 'Boing Boing'
+$lblBoing.AutoSize = $true
+$lblBoing.BackColor = [System.Drawing.Color]::Transparent
+$lblBoing.ForeColor = [System.Drawing.ColorTranslator]::FromHtml('#FF8FC7')
+$lblBoing.Font = New-Object System.Drawing.Font 'Segoe UI', 6.5, ([System.Drawing.FontStyle]::Italic)
+$lblBoing.Location = New-Object System.Drawing.Point 20, 24
+$lblBoing.Visible = $false
+$pop.Controls.Add($lblBoing)
+$lblBoing.BringToFront()
+
+# Visage 888 : 8=D dont la langue s'allonge avec la conso
+$lblEight = New-Object System.Windows.Forms.Label
+$lblEight.Text = '8=D'
+$lblEight.AutoSize = $true
+$lblEight.BackColor = [System.Drawing.Color]::Transparent
+$lblEight.ForeColor = [System.Drawing.ColorTranslator]::FromHtml('#8A8F9A')
+$lblEight.Font = New-Object System.Drawing.Font 'Consolas', 11, ([System.Drawing.FontStyle]::Bold)
+$lblEight.Location = New-Object System.Drawing.Point 14, 32
+$lblEight.Visible = $false
+$pop.Controls.Add($lblEight)
+$lblEight.BringToFront()
+
 $script:djBase = 14
 $script:djPhase = 0.0
 $djTimer = New-Object System.Windows.Forms.Timer
 $djTimer.Interval = 60
 $djTimer.Add_Tick({
     $script:djPhase += 0.35
-    $dx = [int][Math]::Round([Math]::Sin($script:djPhase) * 3.0)
-    $lblDj.Left = $script:djBase + $dx
+    $s = [Math]::Sin($script:djPhase)
+    $lblDj.Left = $script:djBase + [int][Math]::Round($s * 3.0)
+    # le "Boing Boing" saute quand les parenthèses tapent un bord
+    $lblBoing.Left = $script:djBase + 6
+    $lblBoing.Top  = 24 - [int][Math]::Round([Math]::Abs($s) * 4.0)
 })
 
 $pop.Add_Deactivate({ $pop.Hide() })
@@ -347,6 +395,11 @@ function Refresh-All {
             $lblDj.Top = 32
             $lblDj.Left = $script:djBase
         }
+        if ($lblEight) {
+            # un "=" de plus par tranche de 10 % :  8=D, 8==D, 8===D ...
+            $n = [Math]::Max(1, [int][Math]::Ceiling([Math]::Round($d.sessionPct) / 10.0))
+            $lblEight.Text = '8' + ('=' * $n) + 'D'
+        }
         $barSess.Width = [int]([Math]::Max(0,[Math]::Min(1,$d.sessionPct/100))*222)
         $barWeek.Width = [int]([Math]::Max(0,[Math]::Min(1,$d.weekPct/100))*222)
 
@@ -355,6 +408,7 @@ function Refresh-All {
         if ($miThemeN64.Checked) { $t = 'N64' }
         if ($miThemeGC.Checked) { $t = 'GC' }
         if ($miThemeDJ.Checked) { $t = 'DJ' }
+        if ($miTheme888.Checked) { $t = '888' }
 
         if ($t -eq 'N64') {
             $barSess.BackColor = [System.Drawing.Color]::Blue
@@ -365,6 +419,9 @@ function Refresh-All {
         } elseif ($t -eq 'DJ') {
             $barSess.BackColor = [System.Drawing.ColorTranslator]::FromHtml('#FF2D95')
             $barWeek.BackColor = [System.Drawing.ColorTranslator]::FromHtml('#FF2D95')
+        } elseif ($t -eq '888') {
+            $barSess.BackColor = [System.Drawing.ColorTranslator]::FromHtml('#4A5060')
+            $barWeek.BackColor = [System.Drawing.ColorTranslator]::FromHtml('#4A5060')
         } elseif ($t -eq 'Rainbow') {
             $barSess.BackColor = [System.Drawing.Color]::Transparent
             $barWeek.BackColor = [System.Drawing.Color]::Transparent

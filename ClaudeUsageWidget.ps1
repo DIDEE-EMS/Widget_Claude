@@ -133,6 +133,7 @@ function Get-BarColor([double]$pct) {
             <MenuItem x:Name="MiThemeN64" Header="Nintendo 64" IsCheckable="True" IsChecked="False"/>
             <MenuItem x:Name="MiThemeGC" Header="Gamecube" IsCheckable="True" IsChecked="False"/>
             <MenuItem x:Name="MiThemeDJ" Header="DJ" IsCheckable="True" IsChecked="False"/>
+            <MenuItem x:Name="MiTheme888" Header="888" IsCheckable="True" IsChecked="False"/>
           </MenuItem>
           <MenuItem x:Name="MiSound" Header="Activer le son des tokens" IsCheckable="True" IsChecked="True"/>
           <MenuItem x:Name="MiToast" Header="Activer les notifications Windows" IsCheckable="True" IsChecked="True"/>
@@ -170,6 +171,16 @@ function Get-BarColor([double]$pct) {
             <TranslateTransform x:Name="DjShift" X="0"/>
           </TextBlock.RenderTransform>
         </TextBlock>
+        <TextBlock x:Name="DjBoing" Text="Boing Boing" Visibility="Collapsed"
+                   Foreground="#CCFF8FC7" FontFamily="Segoe UI" FontSize="8" FontStyle="Italic"
+                   FontWeight="SemiBold" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,0,0,0">
+          <TextBlock.RenderTransform>
+            <TranslateTransform x:Name="DjBoingShift" Y="0"/>
+          </TextBlock.RenderTransform>
+        </TextBlock>
+        <TextBlock x:Name="EightText" Text="8=D" Visibility="Collapsed"
+                   Foreground="#8A8F9A" FontFamily="Consolas, Segoe UI" FontSize="15"
+                   FontWeight="Bold" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0,0,0,0"/>
       </Grid>
       <Border Background="#3C3C48" CornerRadius="6" Height="12" Margin="0,2,0,0" ClipToBounds="True">
         <Grid>
@@ -228,14 +239,24 @@ $Grip     = $win.FindName('Grip')
 $PikaImg  = $win.FindName('PikaImg')
 $DjText   = $win.FindName('DjText')
 $DjShift  = $win.FindName('DjShift')
+$DjBoing  = $win.FindName('DjBoing')
+$DjBoingShift = $win.FindName('DjBoingShift')
+$EightText = $win.FindName('EightText')
 
-# Petit dandinement gauche-droite du DJ (quelques pixels)
+# Petit dandinement gauche-droite du DJ (quelques pixels), avec un "Boing Boing" qui rebondit
 $script:djPhase = 0.0
 $script:djTimer = New-Object System.Windows.Threading.DispatcherTimer
 $script:djTimer.Interval = [TimeSpan]::FromMilliseconds(60)
 $script:djTimer.Add_Tick({
     $script:djPhase += 0.35
-    $DjShift.X = [Math]::Sin($script:djPhase) * 3.0
+    $s = [Math]::Sin($script:djPhase)
+    $DjShift.X = $s * 3.0
+    if ($DjBoing) {
+        # rebond vertical synchro : le texte saute quand les parenthèses tapent un bord
+        $DjBoingShift.Y = -[Math]::Abs($s) * 4.0
+        # suit horizontalement le visage, décalé de quelques pixels
+        $DjBoing.Margin = New-Object System.Windows.Thickness ([double]$DjText.Margin.Left + 6), 0, 0, 0
+    }
 })
 try {
     $decoder = New-Object System.Windows.Media.Imaging.GifBitmapDecoder([Uri]::new((Join-Path $ScriptDir 'pikachu-cours-dark.gif')), [System.Windows.Media.Imaging.BitmapCreateOptions]::PreservePixelFormat, [System.Windows.Media.Imaging.BitmapCacheOption]::Default)
@@ -335,6 +356,7 @@ function Update-Bar($bar, $fillCol, $emptyCol, $pctBox, [double]$pct) {
     if ($win.FindName('MiThemeN64').IsChecked) { $t = 'N64' }
     if ($win.FindName('MiThemeGC').IsChecked) { $t = 'GC' }
     if ($win.FindName('MiThemeDJ').IsChecked) { $t = 'DJ' }
+    if ($win.FindName('MiTheme888').IsChecked) { $t = '888' }
 
     if ($t -eq 'Rainbow') {
         $br = [System.Windows.Media.LinearGradientBrush]::new()
@@ -366,6 +388,14 @@ function Update-Bar($bar, $fillCol, $emptyCol, $pctBox, [double]$pct) {
         $br.GradientStops.Add([System.Windows.Media.GradientStop]::new([System.Windows.Media.ColorConverter]::ConvertFromString('#FF2D95'), 0.5))
         $br.GradientStops.Add([System.Windows.Media.GradientStop]::new([System.Windows.Media.ColorConverter]::ConvertFromString('#E6007E'), 1.0))
         $bar.Background = $br
+    } elseif ($t -eq '888') {
+        # Palette maussade / triste : gris-bleu délavés
+        $br = [System.Windows.Media.LinearGradientBrush]::new()
+        $br.StartPoint = [System.Windows.Point]::new(0,0); $br.EndPoint = [System.Windows.Point]::new(1,0)
+        $br.GradientStops.Add([System.Windows.Media.GradientStop]::new([System.Windows.Media.ColorConverter]::ConvertFromString('#3A3F4B'), 0.0))
+        $br.GradientStops.Add([System.Windows.Media.GradientStop]::new([System.Windows.Media.ColorConverter]::ConvertFromString('#4A5060'), 0.5))
+        $br.GradientStops.Add([System.Windows.Media.GradientStop]::new([System.Windows.Media.ColorConverter]::ConvertFromString('#5A6070'), 1.0))
+        $bar.Background = $br
     } else {
         $c = Get-BarColor $pct
         $bar.Background = [System.Windows.Media.SolidColorBrush]::new(( [System.Windows.Media.ColorConverter]::ConvertFromString($c) ))
@@ -373,6 +403,7 @@ function Update-Bar($bar, $fillCol, $emptyCol, $pctBox, [double]$pct) {
     if ($pctBox.Name -eq 'SessPct') {
         if ($t -eq 'DJ') {
             if ($PikaImg) { $PikaImg.Visibility = 'Collapsed' }
+            if ($EightText) { $EightText.Visibility = 'Collapsed' }
             if ($DjText) {
                 $DjText.Visibility = 'Visible'
                 $w = if ($DjText.ActualWidth -gt 0) { $DjText.ActualWidth } else { 62 }
@@ -380,8 +411,21 @@ function Update-Bar($bar, $fillCol, $emptyCol, $pctBox, [double]$pct) {
                 $left = ($pct / 100) * $usable
                 $DjText.Margin = New-Object System.Windows.Thickness $left, 0, 0, 0
             }
+            if ($DjBoing) { $DjBoing.Visibility = 'Visible' }
+        } elseif ($t -eq '888') {
+            if ($PikaImg) { $PikaImg.Visibility = 'Collapsed' }
+            if ($DjText) { $DjText.Visibility = 'Collapsed' }
+            if ($DjBoing) { $DjBoing.Visibility = 'Collapsed' }
+            if ($EightText) {
+                # un "=" de plus par tranche de 10 % :  8=D, 8==D, 8===D ...
+                $n = [Math]::Max(1, [int][Math]::Ceiling([Math]::Round($pct) / 10.0))
+                $EightText.Text = '8' + ('=' * $n) + 'D'
+                $EightText.Visibility = 'Visible'
+            }
         } else {
             if ($DjText) { $DjText.Visibility = 'Collapsed' }
+            if ($DjBoing) { $DjBoing.Visibility = 'Collapsed' }
+            if ($EightText) { $EightText.Visibility = 'Collapsed' }
             if ($PikaImg) {
                 $PikaImg.Visibility = 'Visible'
                 $usable = 252 - 24
@@ -510,6 +554,7 @@ function Set-Theme($t) {
     $win.FindName('MiThemeN64').IsChecked = ($t -eq 'N64')
     $win.FindName('MiThemeGC').IsChecked = ($t -eq 'GC')
     $win.FindName('MiThemeDJ').IsChecked = ($t -eq 'DJ')
+    $win.FindName('MiTheme888').IsChecked = ($t -eq '888')
 
     $mb = $win.FindName('MainBorder')
     if ($t -eq 'GC') {
@@ -518,13 +563,15 @@ function Set-Theme($t) {
         $mb.Background = [System.Windows.Media.SolidColorBrush]::new(( [System.Windows.Media.ColorConverter]::ConvertFromString('#EE2A2A2A') ))
     } elseif ($t -eq 'DJ') {
         $mb.Background = [System.Windows.Media.SolidColorBrush]::new(( [System.Windows.Media.ColorConverter]::ConvertFromString('#EE2A0E1E') ))
+    } elseif ($t -eq '888') {
+        $mb.Background = [System.Windows.Media.SolidColorBrush]::new(( [System.Windows.Media.ColorConverter]::ConvertFromString('#EE16181D') ))
     } else {
         $mb.Background = [System.Windows.Media.SolidColorBrush]::new(( [System.Windows.Media.ColorConverter]::ConvertFromString('#EE1B1B1F') ))
     }
 
     # Dandinement du DJ : actif uniquement sur ce thème
     if ($t -eq 'DJ') { $script:djTimer.Start() }
-    else { $script:djTimer.Stop(); if ($DjShift) { $DjShift.X = 0 } }
+    else { $script:djTimer.Stop(); if ($DjShift) { $DjShift.X = 0 }; if ($DjBoingShift) { $DjBoingShift.Y = 0 } }
 
     Refresh-Data
 }
@@ -534,6 +581,7 @@ $win.FindName('MiThemeRainbow').Add_Click({ Set-Theme 'Rainbow' })
 $win.FindName('MiThemeN64').Add_Click({ Set-Theme 'N64' })
 $win.FindName('MiThemeGC').Add_Click({ Set-Theme 'GC' })
 $win.FindName('MiThemeDJ').Add_Click({ Set-Theme 'DJ' })
+$win.FindName('MiTheme888').Add_Click({ Set-Theme '888' })
 
 $win.FindName('MiAbout').Add_Click({
     $ab = New-Object System.Windows.Forms.Form
