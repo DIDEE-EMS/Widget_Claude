@@ -10,3 +10,6 @@ desktop.ini
 
 # État local (position/taille de la fenêtre)
 widget_pos.json
+
+# Audio dérivé (embarqué en base64 dans le script)
+nyan.wav

@@ -23,19 +23,20 @@ Les données se rafraîchissent automatiquement toutes les 2 minutes.
 
 ---
 
-## 🚀 Nouveautés v1.3
+## 🚀 Nouveautés v1.42
 
 - **Raccourci Global** : Appuyez sur `Ctrl + Maj + C` de n'importe où pour cacher ou afficher le widget flottant instantanément !
 - **Notifications & Son** : Recevez une bulle de notification Windows et un son (`tada.wav`) quand vos tokens de session sont restaurés.
 - **Thèmes & Personnalisation** : Clic-droit pour changer de thème ! 
   - *Normal* (gris classique)
-  - *Rainbow* (dégradé vert/jaune/rouge)
+  - *Rainbow* (dégradé arc-en-ciel + **Nyan Cat animé** et sa **musique en boucle**)
   - *Nintendo 64* (fond gris clair, barre 4 couleurs N64)
   - *Gamecube* (fond Indigo, barre orange)
   - *DJ* (Rose Playboy, visage ( ๏ )( ๏ ) qui se dandine avec un « Boing Boing »)
   - *888* (palette maussade, visage 8=D dont la langue s'allonge avec la conso)
+- **Musique des thèmes** : la musique Nyan Cat se lance sur le thème Rainbow ; désactivable via le clic-droit (« Activer la musique des thèmes »).
 - **Mode Fantôme** : Rend le widget flottant semi-transparent (50%) pour ne pas gêner votre code.
-- **Pikachu** : Un petit Pikachu animé court le long de votre barre de session ! (Parfaitement détouré via Matting algorithmique).
+- **Mascottes animées** : un Pikachu (thèmes classiques) ou un Nyan Cat (Rainbow) court le long de votre barre de session.
 - **Historique** : Génère un journal d'utilisation `ClaudeHistory.log` pour suivre l'heure exacte de vos limites et renouvellements.
 
 ---
@@ -76,13 +77,14 @@ Pour désactiver : `powershell -ExecutionPolicy Bypass -File Installer-Demarrage
 
 | Fichier | Rôle |
 |---------|------|
-| `ClaudeWidget.exe` | Le widget flottant, fichier unique 100 % autonome (Pikachu intégré). |
+| `ClaudeWidget.exe` | Le widget flottant, fichier unique 100 % autonome (Pikachu, Nyan Cat et musique intégrés). |
 | `ClaudeUsageWidget.ps1` | Code du widget flottant (WPF / PowerShell). |
 | `ClaudeWidget.vbs` | Lanceur silencieux du script. |
 | `Installer-Demarrage.ps1` | Active / désactive le lancement au démarrage. |
-| `pikachu-cours-dark.gif` | Sprite animé du Pikachu (source ; déjà intégré dans `ClaudeWidget.exe`). |
+| `pikachu-cours-dark.gif` / `nyan-cat.gif` | Sprites animés (sources ; déjà intégrés dans `ClaudeWidget.exe`). |
 | `Build-Icon.ps1` | Génère `claude.ico`. |
 | `claude.ico` | Icône du widget. |
+| `tools/` | Source de la musique Nyan Cat (`.mid`) et script de rendu chiptune (`render-nyan.py`). |
 | `archives/` | Ancien widget « zone de notification » (`ClaudeTrayWidget`), plus maintenu. |
 
 ---
