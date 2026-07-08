@@ -75,15 +75,14 @@ Pour désactiver manuellement : décoche simplement l'option ou supprime le racc
 
 | Fichier | Rôle |
 |---------|------|
-| `ClaudeWidget.exe` | Le widget flottant en un seul fichier (le plus simple). |
+| `ClaudeWidget.exe` | Le widget flottant, fichier unique 100 % autonome (Pikachu intégré). |
 | `ClaudeUsageWidget.ps1` | Code du widget flottant (WPF / PowerShell). |
 | `ClaudeTrayWidget.exe` | Le widget de zone de notification en un seul fichier. |
 | `ClaudeTrayWidget.ps1` | Code de la version icône (zone de notification). |
 | `ClaudeWidget.vbs` / `ClaudeTray.vbs` | Lanceurs silencieux des scripts ci-dessus. |
-| `pikachu-cours-dark.gif` | Sprite animé pour la barre de progression. |
+| `pikachu-cours-dark.gif` | Sprite animé du Pikachu (intégré dans `ClaudeWidget.exe` ; à garder à côté de `ClaudeTrayWidget.exe`). |
 | `Build-Icon.ps1` | Génère `claude.ico`. |
 | `claude.ico` | Icône du widget. |
-| `Widget_Claude_Portable/` | Version prête à copier sur clé USB (mêmes fichiers). |
 
 ---
 

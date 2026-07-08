@@ -7,3 +7,6 @@
 *.log
 Thumbs.db
 desktop.ini
+
+# État local (position/taille de la fenêtre)
+widget_pos.json
