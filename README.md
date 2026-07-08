@@ -23,7 +23,7 @@ Les données se rafraîchissent automatiquement toutes les 2 minutes.
 
 ---
 
-## 🚀 Nouveautés v1.42
+## 🚀 Nouveautés v1.42(b)
 
 - **Raccourci Global** : Appuyez sur `Ctrl + Maj + C` de n'importe où pour cacher ou afficher le widget flottant instantanément !
 - **Notifications & Son** : Recevez une bulle de notification Windows et un son (`tada.wav`) quand vos tokens de session sont restaurés.
@@ -34,7 +34,7 @@ Les données se rafraîchissent automatiquement toutes les 2 minutes.
   - *Gamecube* (fond Indigo, barre orange)
   - *DJ* (Rose Playboy, visage ( ๏ )( ๏ ) qui se dandine avec un « Boing Boing »)
   - *888* (palette maussade, visage 8=D dont la langue s'allonge avec la conso)
-- **Musique des thèmes** : la musique Nyan Cat se lance sur le thème Rainbow ; désactivable via le clic-droit (« Activer la musique des thèmes »).
+- **Musique des thèmes** : la musique Nyan Cat tourne en boucle sur le thème Rainbow, et un son se joue une fois à la sélection du thème DJ ; le tout désactivable via le clic-droit (« Activer la musique des thèmes »).
 - **Mode Fantôme** : Rend le widget flottant semi-transparent (50%) pour ne pas gêner votre code.
 - **Mascottes animées** : un Pikachu (thèmes classiques) ou un Nyan Cat (Rainbow) court le long de votre barre de session.
 - **Historique** : Génère un journal d'utilisation `ClaudeHistory.log` pour suivre l'heure exacte de vos limites et renouvellements.
