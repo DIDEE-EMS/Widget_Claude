@@ -113,8 +113,13 @@ function New-TrayIcon([double]$sess, [double]$week, [bool]$ok) {
         if ($miThemeRainbow.Checked) { $t = 'Rainbow' }
         if ($miThemeN64.Checked) { $t = 'N64' }
         if ($miThemeGC.Checked) { $t = 'GC' }
+        if ($miThemeDJ.Checked) { $t = 'DJ' }
 
-        if ($t -eq 'Rainbow') {
+        if ($t -eq 'DJ') {
+            $pink = New-Object System.Drawing.SolidBrush ([System.Drawing.ColorTranslator]::FromHtml('#FF2D95'))
+            $g.FillRectangle($pink, $x, 7, [int]([Math]::Max(0.04,[Math]::Min(1,$sess/100))*$w), $h)
+            $g.FillRectangle($pink, $x, 18, [int]([Math]::Max(0.04,[Math]::Min(1,$week/100))*$w), $h); $pink.Dispose()
+        } elseif ($t -eq 'Rainbow') {
             $rect1 = New-Object System.Drawing.Rectangle $x, 7, $w, $h
             $b1 = New-Object System.Drawing.Drawing2D.LinearGradientBrush $rect1, [System.Drawing.Color]::LimeGreen, [System.Drawing.Color]::Crimson, 0.0
             $g.FillRectangle($b1, $x, 7, [int]([Math]::Max(0.04,[Math]::Min(1,$sess/100))*$w), $h); $b1.Dispose()
@@ -177,16 +182,19 @@ $miThemeNormal = New-Object System.Windows.Forms.ToolStripMenuItem 'Défaut'
 $miThemeRainbow = New-Object System.Windows.Forms.ToolStripMenuItem 'Rainbow'
 $miThemeN64 = New-Object System.Windows.Forms.ToolStripMenuItem 'Nintendo 64'
 $miThemeGC = New-Object System.Windows.Forms.ToolStripMenuItem 'Gamecube'
+$miThemeDJ = New-Object System.Windows.Forms.ToolStripMenuItem 'DJ'
 
 $miThemeNormal.Add_Click({ Set-TrayTheme 'Normal' })
 $miThemeRainbow.Add_Click({ Set-TrayTheme 'Rainbow' })
 $miThemeN64.Add_Click({ Set-TrayTheme 'N64' })
 $miThemeGC.Add_Click({ Set-TrayTheme 'GC' })
+$miThemeDJ.Add_Click({ Set-TrayTheme 'DJ' })
 
 [void]$miTheme.DropDownItems.Add($miThemeNormal)
 [void]$miTheme.DropDownItems.Add($miThemeRainbow)
 [void]$miTheme.DropDownItems.Add($miThemeN64)
 [void]$miTheme.DropDownItems.Add($miThemeGC)
+[void]$miTheme.DropDownItems.Add($miThemeDJ)
 
 [void]$menu.Items.Add($miTheme)
 
@@ -240,12 +248,25 @@ function Set-TrayTheme($t) {
     $miThemeRainbow.Checked = ($t -eq 'Rainbow')
     $miThemeN64.Checked = ($t -eq 'N64')
     $miThemeGC.Checked = ($t -eq 'GC')
+    $miThemeDJ.Checked = ($t -eq 'DJ')
     if ($t -eq 'GC') {
         $pop.BackColor = [System.Drawing.ColorTranslator]::FromHtml('#1A1A24')
     } elseif ($t -eq 'N64') {
         $pop.BackColor = [System.Drawing.ColorTranslator]::FromHtml('#2A2A2A')
+    } elseif ($t -eq 'DJ') {
+        $pop.BackColor = [System.Drawing.ColorTranslator]::FromHtml('#2A0E1E')
     } else {
         $pop.BackColor = [System.Drawing.ColorTranslator]::FromHtml('#1B1B1F')
+    }
+    # Dandinement du DJ actif uniquement sur ce thème
+    if ($t -eq 'DJ') {
+        if ($lblDj) { $lblDj.Visible = $true }
+        if ($pbPika) { $pbPika.Visible = $false }
+        if ($djTimer) { $djTimer.Start() }
+    } else {
+        if ($djTimer) { $djTimer.Stop() }
+        if ($lblDj) { $lblDj.Visible = $false }
+        if ($pbPika) { $pbPika.Visible = $true }
     }
     Refresh-All
 }
@@ -259,6 +280,29 @@ try { $pbPika.ImageLocation = Join-Path $ScriptDir 'pikachu-cours-dark.gif' } ca
 $pbPika.Location = New-Object System.Drawing.Point 14, 30
 $pop.Controls.Add($pbPika)
 $pbPika.BringToFront()
+
+# Visage DJ (thème DJ) : ( ๏ )( ๏ ) rose Playboy, se dandine de gauche à droite
+$lblDj = New-Object System.Windows.Forms.Label
+$lblDj.Text = [char]0x0028 + [char]0x0020 + [char]0x0E4F + [char]0x0020 + [char]0x0029 + [char]0x0028 + [char]0x0020 + [char]0x0E4F + [char]0x0020 + [char]0x0029
+$lblDj.AutoSize = $true
+$lblDj.BackColor = [System.Drawing.Color]::Transparent
+$lblDj.ForeColor = [System.Drawing.ColorTranslator]::FromHtml('#FF2D95')
+$lblDj.Font = New-Object System.Drawing.Font 'Segoe UI', 11, ([System.Drawing.FontStyle]::Bold)
+$lblDj.Location = New-Object System.Drawing.Point 14, 32
+$lblDj.Visible = $false
+$pop.Controls.Add($lblDj)
+$lblDj.BringToFront()
+
+$script:djBase = 14
+$script:djPhase = 0.0
+$djTimer = New-Object System.Windows.Forms.Timer
+$djTimer.Interval = 60
+$djTimer.Add_Tick({
+    $script:djPhase += 0.35
+    $dx = [int][Math]::Round([Math]::Sin($script:djPhase) * 3.0)
+    $lblDj.Left = $script:djBase + $dx
+})
+
 $pop.Add_Deactivate({ $pop.Hide() })
 
 # ---------- État + rafraîchissement ----------
@@ -297,20 +341,30 @@ function Refresh-All {
         $usable = 222 - 24
         $left = 14 + ($d.sessionPct / 100) * $usable
         $pbPika.Location = New-Object System.Drawing.Point [int]$left, 30
+        if ($lblDj) {
+            $djUsable = [Math]::Max(0, 222 - $lblDj.Width)
+            $script:djBase = 14 + [int](($d.sessionPct / 100) * $djUsable)
+            $lblDj.Top = 32
+            $lblDj.Left = $script:djBase
+        }
         $barSess.Width = [int]([Math]::Max(0,[Math]::Min(1,$d.sessionPct/100))*222)
         $barWeek.Width = [int]([Math]::Max(0,[Math]::Min(1,$d.weekPct/100))*222)
-        
+
         $t = 'Normal'
         if ($miThemeRainbow.Checked) { $t = 'Rainbow' }
         if ($miThemeN64.Checked) { $t = 'N64' }
         if ($miThemeGC.Checked) { $t = 'GC' }
-        
+        if ($miThemeDJ.Checked) { $t = 'DJ' }
+
         if ($t -eq 'N64') {
             $barSess.BackColor = [System.Drawing.Color]::Blue
             $barWeek.BackColor = [System.Drawing.Color]::Blue
         } elseif ($t -eq 'GC') {
             $barSess.BackColor = [System.Drawing.Color]::Indigo
             $barWeek.BackColor = [System.Drawing.Color]::Indigo
+        } elseif ($t -eq 'DJ') {
+            $barSess.BackColor = [System.Drawing.ColorTranslator]::FromHtml('#FF2D95')
+            $barWeek.BackColor = [System.Drawing.ColorTranslator]::FromHtml('#FF2D95')
         } elseif ($t -eq 'Rainbow') {
             $barSess.BackColor = [System.Drawing.Color]::Transparent
             $barWeek.BackColor = [System.Drawing.Color]::Transparent

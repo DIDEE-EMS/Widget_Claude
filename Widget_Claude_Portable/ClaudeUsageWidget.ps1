@@ -132,6 +132,7 @@ function Get-BarColor([double]$pct) {
             <MenuItem x:Name="MiThemeRainbow" Header="Rainbow" IsCheckable="True" IsChecked="False"/>
             <MenuItem x:Name="MiThemeN64" Header="Nintendo 64" IsCheckable="True" IsChecked="False"/>
             <MenuItem x:Name="MiThemeGC" Header="Gamecube" IsCheckable="True" IsChecked="False"/>
+            <MenuItem x:Name="MiThemeDJ" Header="DJ" IsCheckable="True" IsChecked="False"/>
           </MenuItem>
           <MenuItem x:Name="MiSound" Header="Activer le son des tokens" IsCheckable="True" IsChecked="True"/>
           <MenuItem x:Name="MiToast" Header="Activer les notifications Windows" IsCheckable="True" IsChecked="True"/>
@@ -162,6 +163,13 @@ function Get-BarColor([double]$pct) {
       </Grid>
       <Grid Margin="0,0,0,0" Height="24">
         <Image x:Name="PikaImg" Stretch="Uniform" Width="24" Height="24" HorizontalAlignment="Left" Margin="0,0,0,0"/>
+        <TextBlock x:Name="DjText" Text="( &#x0E4F; )( &#x0E4F; )" Visibility="Collapsed"
+                   Foreground="#FF2D95" FontFamily="Segoe UI, Leelawadee UI, Nirmala UI" FontSize="15"
+                   FontWeight="Bold" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0,0,0,0">
+          <TextBlock.RenderTransform>
+            <TranslateTransform x:Name="DjShift" X="0"/>
+          </TextBlock.RenderTransform>
+        </TextBlock>
       </Grid>
       <Border Background="#3C3C48" CornerRadius="6" Height="12" Margin="0,2,0,0" ClipToBounds="True">
         <Grid>
@@ -218,6 +226,17 @@ $WeekFill = $win.FindName('WeekFill'); $WeekEmpty = $win.FindName('WeekEmpty')
 $BtnClose = $win.FindName('BtnClose')
 $Grip     = $win.FindName('Grip')
 $PikaImg  = $win.FindName('PikaImg')
+$DjText   = $win.FindName('DjText')
+$DjShift  = $win.FindName('DjShift')
+
+# Petit dandinement gauche-droite du DJ (quelques pixels)
+$script:djPhase = 0.0
+$script:djTimer = New-Object System.Windows.Threading.DispatcherTimer
+$script:djTimer.Interval = [TimeSpan]::FromMilliseconds(60)
+$script:djTimer.Add_Tick({
+    $script:djPhase += 0.35
+    $DjShift.X = [Math]::Sin($script:djPhase) * 3.0
+})
 try {
     $decoder = New-Object System.Windows.Media.Imaging.GifBitmapDecoder([Uri]::new((Join-Path $ScriptDir 'pikachu-cours-dark.gif')), [System.Windows.Media.Imaging.BitmapCreateOptions]::PreservePixelFormat, [System.Windows.Media.Imaging.BitmapCacheOption]::Default)
     $script:pikaFrames = $decoder.Frames
@@ -315,6 +334,7 @@ function Update-Bar($bar, $fillCol, $emptyCol, $pctBox, [double]$pct) {
     if ($win.FindName('MiThemeRainbow').IsChecked) { $t = 'Rainbow' }
     if ($win.FindName('MiThemeN64').IsChecked) { $t = 'N64' }
     if ($win.FindName('MiThemeGC').IsChecked) { $t = 'GC' }
+    if ($win.FindName('MiThemeDJ').IsChecked) { $t = 'DJ' }
 
     if ($t -eq 'Rainbow') {
         $br = [System.Windows.Media.LinearGradientBrush]::new()
@@ -338,14 +358,37 @@ function Update-Bar($bar, $fillCol, $emptyCol, $pctBox, [double]$pct) {
         $br.GradientStops.Add([System.Windows.Media.GradientStop]::new([System.Windows.Media.ColorConverter]::ConvertFromString('#808080'), 0.5))
         $br.GradientStops.Add([System.Windows.Media.GradientStop]::new([System.Windows.Media.ColorConverter]::ConvertFromString('#FFA500'), 1.0))
         $bar.Background = $br
+    } elseif ($t -eq 'DJ') {
+        # Rose Playboy
+        $br = [System.Windows.Media.LinearGradientBrush]::new()
+        $br.StartPoint = [System.Windows.Point]::new(0,0); $br.EndPoint = [System.Windows.Point]::new(1,0)
+        $br.GradientStops.Add([System.Windows.Media.GradientStop]::new([System.Windows.Media.ColorConverter]::ConvertFromString('#FF8FC7'), 0.0))
+        $br.GradientStops.Add([System.Windows.Media.GradientStop]::new([System.Windows.Media.ColorConverter]::ConvertFromString('#FF2D95'), 0.5))
+        $br.GradientStops.Add([System.Windows.Media.GradientStop]::new([System.Windows.Media.ColorConverter]::ConvertFromString('#E6007E'), 1.0))
+        $bar.Background = $br
     } else {
         $c = Get-BarColor $pct
         $bar.Background = [System.Windows.Media.SolidColorBrush]::new(( [System.Windows.Media.ColorConverter]::ConvertFromString($c) ))
     }
-    if ($PikaImg -and $pctBox.Name -eq 'SessPct') {
-        $usable = 252 - 24
-        $left = ($pct / 100) * $usable
-        $PikaImg.Margin = New-Object System.Windows.Thickness $left, 0, 0, 0
+    if ($pctBox.Name -eq 'SessPct') {
+        if ($t -eq 'DJ') {
+            if ($PikaImg) { $PikaImg.Visibility = 'Collapsed' }
+            if ($DjText) {
+                $DjText.Visibility = 'Visible'
+                $w = if ($DjText.ActualWidth -gt 0) { $DjText.ActualWidth } else { 62 }
+                $usable = [Math]::Max(0, 252 - $w)
+                $left = ($pct / 100) * $usable
+                $DjText.Margin = New-Object System.Windows.Thickness $left, 0, 0, 0
+            }
+        } else {
+            if ($DjText) { $DjText.Visibility = 'Collapsed' }
+            if ($PikaImg) {
+                $PikaImg.Visibility = 'Visible'
+                $usable = 252 - 24
+                $left = ($pct / 100) * $usable
+                $PikaImg.Margin = New-Object System.Windows.Thickness $left, 0, 0, 0
+            }
+        }
     }
 }
 
@@ -466,15 +509,23 @@ function Set-Theme($t) {
     $win.FindName('MiThemeRainbow').IsChecked = ($t -eq 'Rainbow')
     $win.FindName('MiThemeN64').IsChecked = ($t -eq 'N64')
     $win.FindName('MiThemeGC').IsChecked = ($t -eq 'GC')
-    
+    $win.FindName('MiThemeDJ').IsChecked = ($t -eq 'DJ')
+
     $mb = $win.FindName('MainBorder')
     if ($t -eq 'GC') {
         $mb.Background = [System.Windows.Media.SolidColorBrush]::new(( [System.Windows.Media.ColorConverter]::ConvertFromString('#EE1A1A24') ))
     } elseif ($t -eq 'N64') {
         $mb.Background = [System.Windows.Media.SolidColorBrush]::new(( [System.Windows.Media.ColorConverter]::ConvertFromString('#EE2A2A2A') ))
+    } elseif ($t -eq 'DJ') {
+        $mb.Background = [System.Windows.Media.SolidColorBrush]::new(( [System.Windows.Media.ColorConverter]::ConvertFromString('#EE2A0E1E') ))
     } else {
         $mb.Background = [System.Windows.Media.SolidColorBrush]::new(( [System.Windows.Media.ColorConverter]::ConvertFromString('#EE1B1B1F') ))
     }
+
+    # Dandinement du DJ : actif uniquement sur ce thème
+    if ($t -eq 'DJ') { $script:djTimer.Start() }
+    else { $script:djTimer.Stop(); if ($DjShift) { $DjShift.X = 0 } }
+
     Refresh-Data
 }
 
@@ -482,6 +533,7 @@ $win.FindName('MiThemeNormal').Add_Click({ Set-Theme 'Normal' })
 $win.FindName('MiThemeRainbow').Add_Click({ Set-Theme 'Rainbow' })
 $win.FindName('MiThemeN64').Add_Click({ Set-Theme 'N64' })
 $win.FindName('MiThemeGC').Add_Click({ Set-Theme 'GC' })
+$win.FindName('MiThemeDJ').Add_Click({ Set-Theme 'DJ' })
 
 $win.FindName('MiAbout').Add_Click({
     $ab = New-Object System.Windows.Forms.Form
