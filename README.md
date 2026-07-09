@@ -1,4 +1,4 @@
-# Widget Claude v1.42(s)
+# Widget Claude v1.42(x)
 
 Widget de bureau pour Windows 11 qui affiche **en direct ta consommation Claude** : la fenêtre de session (5 h) et le quota hebdomadaire (7 jours), avec le temps restant avant chaque reset.
 
@@ -22,6 +22,12 @@ Barres de couleur : 🟢 vert < 50 %, 🟠 ambre 50–85 %, 🔴 rouge > 85 %.
 Les données se rafraîchissent automatiquement toutes les 2 minutes.
 
 ---
+
+## 🚀 Nouveautés v1.42(x)
+
+- **Journal de diagnostic** : le widget écrit une ligne par relève (toutes les 2 min) dans `ClaudeTrace.csv` — les deux pourcentages et leurs variations, les dates de reset, le temps d'inactivité clavier/souris, et le nombre de processus Claude Code actifs sur la machine. Ça permet de répondre à la question « la conso a-t-elle monté cette nuit, et à cause de quoi ? ». Ouvrable directement via le **clic-droit → « Ouvrir le journal de diagnostic »**, désactivable par la case juste au-dessus.
+
+  > Le widget lui-même ne consomme **aucun token** : il ne fait qu'un `GET` de lecture sur l'endpoint de consommation, plus un `POST` de rafraîchissement du jeton OAuth. Les deux barres affichent des **fenêtres glissantes sur la consommation passée** — la barre 7 jours ne redescend donc pas parce qu'on arrête de travailler.
 
 ## 🚀 Nouveautés v1.42(s)
 
@@ -83,6 +89,7 @@ Pour désactiver : `powershell -ExecutionPolicy Bypass -File Installer-Demarrage
 | `ClaudeUsageWidget.ps1` | Code du widget flottant (WPF / PowerShell). |
 | `ClaudeWidget.vbs` | Lanceur silencieux du script. |
 | `Installer-Demarrage.ps1` | Active / désactive le lancement au démarrage. |
+| `ClaudeTrace.csv` | Journal de diagnostic généré à l'exécution (une ligne par relève, non versionné, rotation à 5 Mo). |
 | `pikachu-cours-trans.gif` / `nyan-cat.gif` | Sprites animés à fond transparent (sources ; déjà intégrés dans `ClaudeWidget.exe`). |
 | `Build-Icon.ps1` | Génère `claude.ico`. |
 | `claude.ico` | Icône du widget. |

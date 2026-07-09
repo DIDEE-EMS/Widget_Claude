@@ -8,6 +8,10 @@
 Thumbs.db
 desktop.ini
 
+# Journal de diagnostic (une ligne par relève, local à chaque poste)
+ClaudeTrace.csv
+ClaudeTrace.csv.1
+
 # État local (position/taille de la fenêtre)
 widget_pos.json
 

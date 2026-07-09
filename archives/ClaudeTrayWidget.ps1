@@ -358,12 +358,6 @@ function Refresh-All {
     $d = Get-Usage
     if ($d.ok) {
         $play = $false
-        if ($script:hasData -and $script:lastSessRst -and $d.sessionRst -and ($script:lastSessRst -ne $d.sessionRst)) {
-            try {
-                $oldTime = ([datetimeoffset]$script:lastSessRst).LocalDateTime
-                if ((Get-Date) -ge $oldTime.AddMinutes(-5)) { $play = $true }
-            } catch {}
-        }
         if ($script:hasData -and ($null -ne $script:lastSessPct) -and (($script:lastSessPct - $d.sessionPct) -ge 1)) {
             $play = $true
         }

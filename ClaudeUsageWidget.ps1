@@ -23,6 +23,18 @@ using System.Runtime.InteropServices;
 public class Hotkey {
     [DllImport("user32.dll")] public static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
 }
+public class IdleInfo {
+    [StructLayout(LayoutKind.Sequential)]
+    private struct LASTINPUTINFO { public uint cbSize; public uint dwTime; }
+    [DllImport("user32.dll")] private static extern bool GetLastInputInfo(ref LASTINPUTINFO plii);
+    // Secondes écoulées depuis la dernière frappe / le dernier mouvement souris, tous processus confondus.
+    public static long SecondsIdle() {
+        LASTINPUTINFO lii = new LASTINPUTINFO();
+        lii.cbSize = (uint)Marshal.SizeOf(lii);
+        if (!GetLastInputInfo(ref lii)) return -1;
+        return (long)(unchecked((uint)Environment.TickCount - lii.dwTime) / 1000);
+    }
+}
 "@
 
 function Write-Log($msg) {
@@ -34,6 +46,79 @@ function Write-Log($msg) {
 $TokenUrl   = 'https://console.anthropic.com/v1/oauth/token'
 $UsageUrl   = 'https://api.anthropic.com/api/oauth/usage'
 $PollMs     = 120000   # rafraîchit les données toutes les 2 min
+
+# ---------- Journal de diagnostic ----------
+# Une ligne par relève (~2 min), pour répondre à : la conso monte-t-elle sans activité ?
+$TracePath   = Join-Path $ScriptDir 'ClaudeTrace.csv'
+$TraceMaxKB  = 5120                    # au-delà : bascule vers ClaudeTrace.csv.1
+$script:traceOn        = $true
+$script:tokenRefreshed = $false
+
+$TraceHeader = 'ts_local;ts_utc;ok;err;session_pct;session_delta;session_resets_at;week_pct;week_delta;week_resets_at;token_refreshed;idle_sec;claude_procs;node_procs'
+
+# Format invariant : le séparateur est ';', le point décimal ne dépend donc pas de la locale.
+function Format-TraceNum($v) {
+    if ($null -eq $v) { return '' }
+    try { return ([double]$v).ToString([System.Globalization.CultureInfo]::InvariantCulture) } catch { return '' }
+}
+
+function Get-ClaudeProcCount {
+    # Le widget lui-même s'appelle ClaudeWidget : on l'exclut pour ne compter que Claude Code / l'app.
+    try {
+        $p = @(Get-Process -ErrorAction SilentlyContinue)
+        $claude = @($p | Where-Object { $_.ProcessName -match '^claude' -and $_.ProcessName -notmatch '^claudewidget' -and $_.Id -ne $PID }).Count
+        $node   = @($p | Where-Object { $_.ProcessName -eq 'node' }).Count
+        return @{ claude = $claude; node = $node }
+    } catch { return @{ claude = -1; node = -1 } }
+}
+
+function Write-Trace($ok, $err, $sess, $week, $sessRst, $weekRst) {
+    if (-not $script:traceOn) { return }
+    try {
+        if (Test-Path $TracePath) {
+            if ((Get-Item $TracePath).Length -ge ($TraceMaxKB * 1KB)) {
+                $bak = "$TracePath.1"
+                if (Test-Path $bak) { Remove-Item $bak -Force }
+                Move-Item $TracePath $bak -Force
+            }
+        }
+        $enc = New-Object System.Text.UTF8Encoding($false)
+        if (-not (Test-Path $TracePath)) {
+            [System.IO.File]::AppendAllText($TracePath, ($TraceHeader + "`r`n"), $enc)
+        }
+
+        # Deltas calculés avant que Refresh-Data ne mette à jour les dernières valeurs.
+        $dSess = ''; $dWeek = ''
+        if ($ok) {
+            if ($null -ne $script:lastSessPct) { $dSess = Format-TraceNum ([Math]::Round(([double]$sess - [double]$script:lastSessPct), 3)) }
+            if ($null -ne $script:lastWeekPct) { $dWeek = Format-TraceNum ([Math]::Round(([double]$week - [double]$script:lastWeekPct), 3)) }
+        }
+
+        $idle = -1
+        try { $idle = [IdleInfo]::SecondsIdle() } catch {}
+        $pc   = Get-ClaudeProcCount
+        $now  = Get-Date
+        $safeErr = if ($err) { ([string]$err) -replace '[;\r\n]', ' ' } else { '' }
+
+        $cells = @(
+            $now.ToString('yyyy-MM-dd HH:mm:ss')
+            $now.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+            $(if ($ok) { '1' } else { '0' })
+            $safeErr
+            (Format-TraceNum $sess)
+            $dSess
+            $(if ($sessRst) { [string]$sessRst } else { '' })
+            (Format-TraceNum $week)
+            $dWeek
+            $(if ($weekRst) { [string]$weekRst } else { '' })
+            $(if ($script:tokenRefreshed) { '1' } else { '0' })
+            [string]$idle
+            [string]$pc.claude
+            [string]$pc.node
+        )
+        [System.IO.File]::AppendAllText($TracePath, (($cells -join ';') + "`r`n"), $enc)
+    } catch {}
+}
 
 # ---------- Logique données ----------
 function Get-Creds {
@@ -73,6 +158,7 @@ function Refresh-Token {
     }
     $c.claudeAiOauth = $o
     Save-Creds $c
+    $script:tokenRefreshed = $true
     return $o.accessToken
 }
 
@@ -168,6 +254,8 @@ function Get-BarColor([double]$pct) {
           <MenuItem x:Name="MiSound" Header="Activer le son des tokens" IsCheckable="True" IsChecked="True"/>
           <MenuItem x:Name="MiThemeMusic" Header="Activer la musique des thèmes" IsCheckable="True" IsChecked="True"/>
           <MenuItem x:Name="MiToast" Header="Activer les notifications Windows" IsCheckable="True" IsChecked="True"/>
+          <MenuItem x:Name="MiTrace" Header="Journal de diagnostic (ClaudeTrace.csv)" IsCheckable="True" IsChecked="True"/>
+          <MenuItem x:Name="MiOpenTrace" Header="Ouvrir le journal de diagnostic"/>
           <Separator/>
           <MenuItem x:Name="MiAbout" Header="À propos..."/>
         </ContextMenu>
@@ -179,7 +267,7 @@ function Get-BarColor([double]$pct) {
           <Ellipse Width="9" Height="9" Fill="#D97757" VerticalAlignment="Center"/>
           <TextBlock Text="Claude" Foreground="#FFFFFF" FontFamily="Segoe UI" FontSize="13"
                      FontWeight="SemiBold" Margin="7,0,0,0" VerticalAlignment="Center"/>
-          <TextBlock Text="v1.42(s)" Foreground="#666666" FontFamily="Segoe UI" FontSize="10"
+          <TextBlock Text="v1.42(x)" Foreground="#666666" FontFamily="Segoe UI" FontSize="10"
                      FontWeight="Regular" Margin="6,2,0,0" VerticalAlignment="Center"/>
         </StackPanel>
         <TextBlock x:Name="BtnClose" Text="✕" Foreground="#888" FontFamily="Segoe UI" FontSize="13"
@@ -602,8 +690,10 @@ function Update-Bar($bar, $fillCol, $emptyCol, $pctBox, [double]$pct) {
 }
 
 function Refresh-Data {
+    $script:tokenRefreshed = $false
     $d = Get-Usage
     if (-not $d.ok) {
+        Write-Trace $false $d.err $null $null '' ''
         # erreur transitoire : on garde les dernières valeurs si on en a déjà
         if (-not $script:hasData) {
             $SessPct.Text = '—'; $WeekPct.Text = '—'
@@ -612,13 +702,10 @@ function Refresh-Data {
         }
         return
     }
+    # Avant la mise à jour de $script:lastSessPct/$lastWeekPct : Write-Trace en a besoin pour les deltas.
+    Write-Trace $true '' $d.sessionPct $d.weekPct $d.sessionRst $d.weekRst
+
     $play = $false
-    if ($script:hasData -and $script:lastSessRst -and $d.sessionRst -and ($script:lastSessRst -ne $d.sessionRst)) {
-        try {
-            $oldTime = ([datetimeoffset]$script:lastSessRst).LocalDateTime
-            if ((Get-Date) -ge $oldTime.AddMinutes(-5)) { $play = $true }
-        } catch {}
-    }
     if ($script:hasData -and ($null -ne $script:lastSessPct) -and (($script:lastSessPct - $d.sessionPct) -ge 1)) {
         $play = $true
     }
@@ -728,6 +815,20 @@ $win.Add_ContentRendered({
 
 $win.FindName('MiAlwaysOnTop').Add_Click({ $win.Topmost = $win.FindName('MiAlwaysOnTop').IsChecked })
 $win.FindName('MiGhost').Add_Click({ if ($win.FindName('MiGhost').IsChecked) { $win.Opacity = 0.5 } else { $win.Opacity = 1.0 } })
+$win.FindName('MiTrace').Add_Click({ $script:traceOn = $win.FindName('MiTrace').IsChecked })
+$win.FindName('MiOpenTrace').Add_Click({
+    try {
+        if (-not (Test-Path $TracePath)) {
+            [System.Windows.MessageBox]::Show(
+                "Aucun journal pour l'instant.`r`nIl est créé à la première relève (moins de 2 minutes après le lancement).",
+                'Claude Widget', 'OK', 'Information') | Out-Null
+            return
+        }
+        # Association .csv (Excel...) si elle existe, sinon repli sur le Bloc-notes.
+        try { Start-Process -FilePath $TracePath -ErrorAction Stop }
+        catch { Start-Process -FilePath 'notepad.exe' -ArgumentList "`"$TracePath`"" }
+    } catch {}
+})
 
 function Set-Theme($t) {
     $script:currentTheme = $t

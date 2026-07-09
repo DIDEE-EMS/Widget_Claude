@@ -15,7 +15,7 @@
 
 .EXAMPLE
     # Auto-signe actuel (magasin CurrentUser\My)
-    .\Sign-Widget.ps1 -Thumbprint A5A8EBF228F2299EE618462D48DA5AC3C89FC775
+    .\Sign-Widget.ps1 -Thumbprint BC853BE5663319E62A1E0F5B6F1D132AD42A6522
 
 .EXAMPLE
     # Avec un vrai certificat exporte en .pfx
@@ -32,7 +32,9 @@ param(
     [Parameter(ParameterSetName = 'Pfx')]
     [System.Security.SecureString]$PfxPassword,
 
-    [string]$ExePath = (Join-Path $PSScriptRoot 'ClaudeWidget.exe'),
+    # Resolu dans le corps : avec [CmdletBinding()] + jeux de parametres, PowerShell 5.1
+    # evalue les defauts avant de peupler $PSScriptRoot (Join-Path echouerait sur une chaine vide).
+    [string]$ExePath,
 
     # Serveurs d'horodatage RFC3161 (l'horodatage garde la signature valide
     # apres expiration du certificat). On essaie le second si le premier echoue.
@@ -43,6 +45,12 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+
+if (-not $ExePath) {
+    $root = $PSScriptRoot
+    if (-not $root) { $root = Split-Path -Parent $MyInvocation.MyCommand.Path }
+    $ExePath = Join-Path $root 'ClaudeWidget.exe'
+}
 
 if (-not (Test-Path $ExePath)) { throw "Introuvable : $ExePath" }
 
