@@ -110,6 +110,48 @@ Pour désactiver : `powershell -ExecutionPolicy Bypass -File Installer-Demarrage
 
 ---
 
+## Recompiler et signer l'exe
+
+```powershell
+.\Build-Exe.ps1 -Thumbprint BC853BE5663319E62A1E0F5B6F1D132AD42A6522
+```
+
+`Build-Exe.ps1` fige les paramètres ps2exe (dont `-STA`, sans lequel l'exe se termine en silence au démarrage), lit le numéro de version dans le XAML du widget, lance l'exe pour vérifier que la fenêtre charge, puis délègue la signature à `Sign-Widget.ps1`.
+
+> ps2exe n'est pas déterministe : deux compilations du même source produisent deux SHA-256 différents. Le script fige les *paramètres*, pas le binaire. L'authenticité repose sur la signature, pas sur le hash.
+
+### Certificat de signature
+
+L'exe est signé avec un certificat **auto-signé** et horodaté (l'horodatage maintient la signature valide après expiration du certificat) :
+
+```
+CN=Julien Capone (Widget Claude), O=DIDEE-EMS
+Empreinte : BC853BE5663319E62A1E0F5B6F1D132AD42A6522
+Expire    : 2031-07-09
+```
+
+`Get-AuthenticodeSignature` renvoie `Status: UnknownError` sur un auto-signé — c'est normal, la racine n'est pas approuvée. Sur les postes qui déclenchent des faux positifs, importer le certificat dans **Éditeurs approuvés** suffit.
+
+### Si le certificat a disparu du magasin
+
+La clé privée n'existe **que** dans `Cert:\CurrentUser\My` du poste qui a émis le certificat. Sauvegarde-la, hors du dépôt (`*.pfx` est ignoré par Git) :
+
+```powershell
+Export-PfxCertificate -Cert Cert:\CurrentUser\My\BC853BE5663319E62A1E0F5B6F1D132AD42A6522 `
+    -FilePath "$env:USERPROFILE\Documents\widget-signing.pfx" `
+    -Password (Read-Host 'Mot de passe' -AsSecureString)
+```
+
+Pour re-signer depuis cette sauvegarde :
+
+```powershell
+.\Sign-Widget.ps1 -PfxPath "$env:USERPROFILE\Documents\widget-signing.pfx"
+```
+
+Sans le `.pfx`, il faut émettre un **nouveau** certificat (`New-SelfSignedCertificate -Type CodeSigningCert`). Son empreinte sera différente : les postes qui avaient approuvé l'ancien devront réapprouver le nouveau. C'est exactement ce qui est arrivé entre la v1.42(s) et la v1.42(x).
+
+---
+
 ## Licence
 
 Voir le fichier [LICENSE](LICENSE).

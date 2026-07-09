@@ -57,7 +57,13 @@ if (-not (Test-Path $ExePath)) { throw "Introuvable : $ExePath" }
 # 1. Recuperer le certificat
 if ($PSCmdlet.ParameterSetName -eq 'Pfx') {
     if (-not $PfxPassword) { $PfxPassword = Read-Host 'Mot de passe du .pfx' -AsSecureString }
-    $cert = Get-PfxCertificate -FilePath $PfxPath -Password $PfxPassword
+    # Get-PfxCertificate -Password n'existe qu'a partir de PowerShell 6. Sous 5.1
+    # (Windows PowerShell), il faut charger le .pfx via X509Certificate2, qui prend
+    # un SecureString. Sans le flag Exportable, la cle n'est pas utilisable pour signer.
+    $pfxFull = (Resolve-Path $PfxPath).ProviderPath
+    $flags = [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]'Exportable'
+    $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($pfxFull, $PfxPassword, $flags)
+    if (-not $cert.HasPrivateKey) { throw "Le .pfx ne contient pas de cle privee : impossible de signer." }
 } else {
     $cert = Get-Item "Cert:\CurrentUser\My\$Thumbprint" -ErrorAction SilentlyContinue
     if (-not $cert) { $cert = Get-Item "Cert:\LocalMachine\My\$Thumbprint" -ErrorAction SilentlyContinue }

@@ -3,6 +3,11 @@
 *.credentials.json
 .credentials.json
 
+# Cles privees de signature de code : ne doivent JAMAIS entrer dans le depot
+*.pfx
+*.p12
+*.key
+
 # Divers
 *.log
 Thumbs.db
