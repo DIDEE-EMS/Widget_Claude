@@ -91,6 +91,8 @@ Pour désactiver : `powershell -ExecutionPolicy Bypass -File Installer-Demarrage
 | `Installer-Demarrage.ps1` | Active / désactive le lancement au démarrage. |
 | `ClaudeTrace.csv` | Journal de diagnostic généré à l'exécution (une ligne par relève, non versionné, rotation à 5 Mo). |
 | `pikachu-cours-trans.gif` / `nyan-cat.gif` | Sprites animés à fond transparent (sources ; déjà intégrés dans `ClaudeWidget.exe`). |
+| `Build-Exe.ps1` | Recompile `ClaudeWidget.exe` depuis le script (paramètres ps2exe figés, test de démarrage, signature). |
+| `Sign-Widget.ps1` | Signe `ClaudeWidget.exe` avec un certificat de signature de code. |
 | `Build-Icon.ps1` | Génère `claude.ico`. |
 | `claude.ico` | Icône du widget. |
 | `tools/` | Source de la musique Nyan Cat (`.mid`) et script de rendu chiptune (`render-nyan.py`). |

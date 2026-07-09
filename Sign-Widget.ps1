@@ -66,10 +66,15 @@ if ($PSCmdlet.ParameterSetName -eq 'Pfx') {
 Write-Host "Certificat : $($cert.Subject)" -ForegroundColor Cyan
 
 # 2. Arreter le widget s'il tourne (il verrouille l'exe)
+# On cible le processus lance depuis CE fichier : un nom en dur signerait un exe
+# de test tout en arretant, puis relancant, le widget de production.
 $wasRunning = $false
-$proc = Get-Process ClaudeWidget -ErrorAction SilentlyContinue
+$fullExe  = (Resolve-Path $ExePath).ProviderPath
+$procName = [System.IO.Path]::GetFileNameWithoutExtension($fullExe)
+$proc = @(Get-Process -Name $procName -ErrorAction SilentlyContinue |
+          Where-Object { $_.Path -eq $fullExe })
 if ($proc) {
-    Write-Host "Arret du widget (PID $($proc.Id))..." -ForegroundColor Yellow
+    Write-Host "Arret du widget (PID $($proc.Id -join ', '))..." -ForegroundColor Yellow
     $proc | Stop-Process -Force
     Start-Sleep -Milliseconds 800
     $wasRunning = $true
